@@ -119,20 +119,20 @@ with tab2:
     # col4.metric("🏆 F1-Score (Primary)", f"{float(metrics.get('f1_score', 0)):.2%}")
     # col5.metric("ROC-AUC", f"{float(metrics.get('roc_auc', 0)):.2f}")
     
-    st.markdown("---")
+    # st.markdown("---")
     
 
-    col_img1, col_img2 = st.columns(2)
-    with col_img1:
-        if os.path.exists(cm_path):
-            st.image(cm_path, caption="Confusion Matrix pada Data Uji")
-        else:
-            st.error("confusion_matrix.png tidak ditemukan")    
-    with col_img2:
-        if os.path.exists(cr_path):
-            st.image(cr_path, caption="Classification Report pada Data Uji")
-        else:
-            st.error("classification_report.png tidak ditemukan")
+    # col_img1, col_img2 = st.columns(2)
+    # with col_img1:
+    #     if os.path.exists(cm_path):
+    #         st.image(cm_path, caption="Confusion Matrix pada Data Uji")
+    #     else:
+    #         st.error("confusion_matrix.png tidak ditemukan")    
+    # with col_img2:
+    #     if os.path.exists(cr_path):
+    #         st.image(cr_path, caption="Classification Report pada Data Uji")
+    #     else:
+    #         st.error("classification_report.png tidak ditemukan")
 # ------------------------------------------
 # TAB 3: DATA INSIGHTS
 # ------------------------------------------
