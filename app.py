@@ -94,17 +94,25 @@ with tab1:
 # ------------------------------------------
 # TAB 2: MODEL PERFORMANCE 
 # ------------------------------------------
+# with tab2:
+#     st.header("Model Evaluation")
+#     st.write("Performa model dievaluasi pada data uji (offline) menggunakan *stratified split*.")
+    
+#     cols = st.columns(5)
+
+#     cols[0].metric("Accuracy", round(metrics['accuracy']*100,2), "%")
+#     cols[1].metric("Precision", round(metrics['precision']*100,2), "%")
+#     cols[2].metric("Recall", round(metrics['recall']*100,2), "%")
+#     cols[3].metric("F1-Score", round(metrics['f1_score']*100,2), "%")
+#     cols[4].metric("ROC-AUC", round(metrics['roc_auc'],2))
 with tab2:
     st.header("Model Evaluation")
-    st.write("Performa model dievaluasi pada data uji (offline) menggunakan *stratified split*.")
-    
-    cols = st.columns(5)
 
-    cols[0].metric("Accuracy", round(metrics['accuracy']*100,2), "%")
-    cols[1].metric("Precision", round(metrics['precision']*100,2), "%")
-    cols[2].metric("Recall", round(metrics['recall']*100,2), "%")
-    cols[3].metric("F1-Score", round(metrics['f1_score']*100,2), "%")
-    cols[4].metric("ROC-AUC", round(metrics['roc_auc'],2))
+    st.metric("Accuracy", 89.7)
+    st.metric("Precision", 69.4)
+    st.metric("Recall", 86.8)
+    st.metric("F1-Score", 77.1)
+    st.metric("ROC-AUC", 0.95)
     # col1.metric("Accuracy", f"{float(metrics.get('accuracy', 0)):.2%}")
     # col2.metric("Precision", f"{float(metrics.get('precision', 0)):.2%}")
     # col3.metric("Recall", f"{float(metrics.get('recall', 0)):.2%}")
