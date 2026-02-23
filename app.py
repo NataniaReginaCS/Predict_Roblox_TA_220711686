@@ -100,7 +100,14 @@ with tab1:
             st.error("❄️ **PREDICTION: NOT SUCCESS**")
             
         st.metric(label="Success Probability", value=f"{prob:.1%}")
-        st.progress(int(prob * 100))
+        safe_prob = float(prob)
+
+        if safe_prob != safe_prob:  # check NaN
+            safe_prob = 0.0
+
+        safe_prob = max(0.0, min(1.0, safe_prob))
+
+        st.progress(int(safe_prob * 100))
         
 
         st.caption("ℹ️ *Success is defined as being in the top 20% of active games.*")
