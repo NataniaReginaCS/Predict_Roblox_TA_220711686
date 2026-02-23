@@ -61,7 +61,7 @@ with tab1:
 
         threshold = st.slider("Decision Threshold", min_value=0.1, max_value=0.9, value=0.5, step=0.05)
 
-    if st.button("🚀 Predict Success", use_container_width=True):
+    if st.button("🚀 Predict Success"):
         input_data = pd.DataFrame({
             'game_age': [game_age],
             'favorite_rate': [favorite_rate],
@@ -133,4 +133,4 @@ with tab3:
     st.pyplot(fig)
     
     with st.expander("Lihat Data Tabel"):
-        st.dataframe(df_imp, use_container_width=True)
+        st.dataframe(df_imp)
