@@ -4,7 +4,12 @@ import json
 import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+cm_path = os.path.join(BASE_DIR, "assets", "confusion_matrix.png")
+cr_path = os.path.join(BASE_DIR, "assets", "classification_report.png")
 
 st.set_page_config(page_title="Roblox Game Success Predictor", page_icon="🎮", layout="wide")
 
@@ -100,10 +105,15 @@ with tab2:
 
     col_img1, col_img2 = st.columns(2)
     with col_img1:
-        st.image('assets/confusion_matrix.png', caption="Confusion Matrix pada Data Uji", use_column_width=True)
+        if os.path.exists(cm_path):
+            st.image(cm_path, caption="Confusion Matrix pada Data Uji")
+        else:
+            st.error("confusion_matrix.png tidak ditemukan")    
     with col_img2:
-        st.image('assets/roc_curve.png', caption="Receiver Operating Characteristic", use_column_width=True)
-
+        if os.path.exists(cr_path):
+            st.image(cr_path, caption="Classification Report pada Data Uji")
+        else:
+            st.error("classification_report.png tidak ditemukan")
 # ------------------------------------------
 # TAB 3: DATA INSIGHTS
 # ------------------------------------------
