@@ -91,14 +91,13 @@ with tab1:
 with tab2:
     st.header("Model Evaluation")
     st.write("Performa model dievaluasi pada data uji (offline) menggunakan *stratified split*.")
-    st.write(metrics)
+    
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Accuracy", f"{metrics['accuracy']:.2%}")
-    col2.metric("Precision", f"{metrics['precision']:.2%}")
-    col3.metric("Recall", f"{metrics['recall']:.2%}")
-
-    col4.metric("🏆 F1-Score (Primary)", f"{metrics['f1_score']:.2%}") 
-    col5.metric("ROC-AUC", f"{metrics['roc_auc']:.2f}")
+    col1.metric("Accuracy", f"{float(metrics.get('accuracy', 0)):.2%}")
+    col2.metric("Precision", f"{float(metrics.get('precision', 0)):.2%}")
+    col3.metric("Recall", f"{float(metrics.get('recall', 0)):.2%}")
+    col4.metric("🏆 F1-Score (Primary)", f"{float(metrics.get('f1_score', 0)):.2%}")
+    col5.metric("ROC-AUC", f"{float(metrics.get('roc_auc', 0)):.2f}")
     
     st.markdown("---")
     
