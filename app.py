@@ -100,9 +100,9 @@ with tab2:
 
     col_img1, col_img2 = st.columns(2)
     with col_img1:
-        st.image('assets/confusion_matrix.png', caption="Confusion Matrix pada Data Uji", use_container_width=True)
+        st.image('assets/confusion_matrix.png', caption="Confusion Matrix pada Data Uji", use_column_width=True)
     with col_img2:
-        st.image('assets/roc_curve.png', caption="Receiver Operating Characteristic", use_container_width=True)
+        st.image('assets/roc_curve.png', caption="Receiver Operating Characteristic", use_column_width=True)
 
 # ------------------------------------------
 # TAB 3: DATA INSIGHTS
