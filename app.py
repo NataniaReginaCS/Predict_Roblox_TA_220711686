@@ -100,7 +100,7 @@ with tab1:
             st.error("❄️ **PREDICTION: NOT SUCCESS**")
             
         st.metric(label="Success Probability", value=f"{prob:.1%}")
-        st.progress(float(prob))
+        st.progress(int(prob * 100))
         
 
         st.caption("ℹ️ *Success is defined as being in the top 20% of active games.*")
