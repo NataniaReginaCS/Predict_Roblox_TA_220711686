@@ -26,9 +26,15 @@ def load_metrics():
 def load_feature_importance():
     return pd.read_csv('model/feature_importance.csv')
 
-model = load_model()
+# model = load_model()
 # metrics = load_metrics()
 # df_imp = load_feature_importance()
+
+class DummyModel:
+    def predict_proba(self, X):
+        return [[0.3, 0.7]]
+
+model = DummyModel()
 
 metrics = {
     "accuracy": 0.89,
