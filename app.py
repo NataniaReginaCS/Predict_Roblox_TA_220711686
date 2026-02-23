@@ -9,7 +9,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 cm_path = os.path.join(BASE_DIR, "assets", "confusion_matrix.png")
-cr_path = os.path.join(BASE_DIR, "assets", "classification_report.png")
+cr_path = os.path.join(BASE_DIR, "assets", "roc_curve.png")
 
 st.set_page_config(page_title="Roblox Game Success Predictor", page_icon="🎮", layout="wide")
 
@@ -26,29 +26,9 @@ def load_metrics():
 def load_feature_importance():
     return pd.read_csv('model/feature_importance.csv')
 
-# model = load_model()
-# metrics = load_metrics()
-# df_imp = load_feature_importance()
-
-class DummyModel:
-    def predict_proba(self, X):
-        return [[0.3, 0.7]]
-
-model = DummyModel()
-
-metrics = {
-    "accuracy": 0.89,
-    "precision": 0.69,
-    "recall": 0.86,
-    "f1_score": 0.77,
-    "roc_auc": 0.95
-}
-
-import pandas as pd
-df_imp = pd.DataFrame({
-    "Feature": ["A", "B"],
-    "Importance": [0.5, 0.3]
-})
+model = load_model()
+metrics = load_metrics()
+df_imp = load_feature_importance()
 
 # ==========================================
 # APP HEADER
@@ -138,9 +118,9 @@ with tab2:
             st.error("confusion_matrix.png tidak ditemukan")    
     with col_img2:
         if os.path.exists(cr_path):
-            st.image(cr_path, caption="Classification Report pada Data Uji")
+            st.image(cr_path, caption="ROC Curve pada Data Uji")
         else:
-            st.error("classification_report.png tidak ditemukan")
+            st.error("roc_curve.png tidak ditemukan")
 # ------------------------------------------
 # TAB 3: DATA INSIGHTS
 # ------------------------------------------
