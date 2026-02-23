@@ -91,7 +91,7 @@ with tab1:
 with tab2:
     st.header("Model Evaluation")
     st.write("Performa model dievaluasi pada data uji (offline) menggunakan *stratified split*.")
-    
+    st.write(metrics)
     col1, col2, col3, col4, col5 = st.columns(5)
     col1.metric("Accuracy", f"{metrics['accuracy']:.2%}")
     col2.metric("Precision", f"{metrics['precision']:.2%}")
