@@ -27,7 +27,13 @@ def load_feature_importance():
     return pd.read_csv('model/feature_importance.csv')
 
 model = load_model()
-metrics = load_metrics()
+try:
+    metrics = load_metrics()
+except Exception as e:
+    st.error(f"Error loading metrics: {e}")
+    st.stop()
+
+    st.write("DEBUG METRICS:", metrics)
 df_imp = load_feature_importance()
 
 # ==========================================
