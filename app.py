@@ -99,11 +99,17 @@ with tab2:
     st.write("Performa model dievaluasi pada data uji (offline) menggunakan *stratified split*.")
     
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Accuracy", f"{float(metrics.get('accuracy', 0)):.2%}")
-    col2.metric("Precision", f"{float(metrics.get('precision', 0)):.2%}")
-    col3.metric("Recall", f"{float(metrics.get('recall', 0)):.2%}")
-    col4.metric("🏆 F1-Score (Primary)", f"{float(metrics.get('f1_score', 0)):.2%}")
-    col5.metric("ROC-AUC", f"{float(metrics.get('roc_auc', 0)):.2f}")
+
+    col1.metric("Accuracy", round(metrics['accuracy'] * 100, 2), "%")
+    col2.metric("Precision", round(metrics['precision'] * 100, 2), "%")
+    col3.metric("Recall", round(metrics['recall'] * 100, 2), "%")
+    col4.metric("F1-Score (Primary)", round(metrics['f1_score'] * 100, 2), "%")
+    col5.metric("ROC-AUC", round(metrics['roc_auc'], 2))
+    # col1.metric("Accuracy", f"{float(metrics.get('accuracy', 0)):.2%}")
+    # col2.metric("Precision", f"{float(metrics.get('precision', 0)):.2%}")
+    # col3.metric("Recall", f"{float(metrics.get('recall', 0)):.2%}")
+    # col4.metric("🏆 F1-Score (Primary)", f"{float(metrics.get('f1_score', 0)):.2%}")
+    # col5.metric("ROC-AUC", f"{float(metrics.get('roc_auc', 0)):.2f}")
     
     st.markdown("---")
     
