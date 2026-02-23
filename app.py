@@ -33,7 +33,7 @@ except Exception as e:
     st.error(f"Error loading metrics: {e}")
     st.stop()
 
-    st.write("DEBUG METRICS:", metrics)
+st.write("DEBUG METRICS:", metrics)
 df_imp = load_feature_importance()
 
 # ==========================================
