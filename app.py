@@ -126,7 +126,7 @@ with tab2:
     st.json(metrics)
 
     st.subheader("Confusion Matrix")
-    fig_cm, ax_cm = plt.subplots(figsize=(6, 5))
+    fig_cm, ax_cm = plt.subplots(figsize=(8, 6))  
     cm = confusion_matrix(y_test, y_pred)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=['Not Success', 'Success'],
@@ -134,10 +134,10 @@ with tab2:
     ax_cm.set_title('Confusion Matrix')
     ax_cm.set_ylabel('Actual')
     ax_cm.set_xlabel('Predicted')
-    st.pyplot(fig_cm)
+    st.pyplot(fig_cm, use_container_width=True)  
 
     st.subheader("Receiver Operating Characteristic (ROC) Curve")
-    fig_roc, ax_roc = plt.subplots(figsize=(6, 5))
+    fig_roc, ax_roc = plt.subplots(figsize=(8, 6))  
     fpr = roc_data['fpr']
     tpr = roc_data['tpr']
     ax_roc.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC Curve (AUC = {metrics["roc_auc"]:.2f})')
@@ -148,7 +148,7 @@ with tab2:
     ax_roc.set_ylabel('True Positive Rate')
     ax_roc.set_title('Receiver Operating Characteristic (ROC)')
     ax_roc.legend(loc="lower right")
-    st.pyplot(fig_roc)
+    st.pyplot(fig_roc, use_container_width=True)  
 
 # --- TAB 3: DATA INSIGHTS ---
 with tab3:
