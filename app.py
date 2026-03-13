@@ -6,25 +6,38 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
+# Konfigurasi halaman harus dipanggil pertama kali sebelum elemen Streamlit lainnya
+st.set_page_config(page_title="Roblox Game Success Predictor", page_icon="🎮", layout="wide")
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 cm_path = os.path.join(BASE_DIR, "assets", "confusion_matrix.png")
 cr_path = os.path.join(BASE_DIR, "assets", "roc_curve.png")
 
-st.set_page_config(page_title="Roblox Game Success Predictor", page_icon="🎮", layout="wide")
-
+# ==========================================
+# FUNGSI LOAD DATA & MODEL DENGAN ERROR HANDLING
+# ==========================================
 @st.cache_resource
 def load_model():
-    return joblib.load('model/model.pkl')
+    try:
+        return joblib.load('model/model.pkl')
+    except FileNotFoundError:
+        return None
 
 @st.cache_data
 def load_metrics():
-    with open('model/metrics.json', 'r') as f:
-        return json.load(f)
+    try:
+        with open('model/metrics.json', 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
 
 @st.cache_data
 def load_feature_importance():
-    return pd.read_csv('model/feature_importance.csv')
+    try:
+        return pd.read_csv('model/feature_importance.csv')
+    except FileNotFoundError:
+        return pd.DataFrame({'Feature': [], 'Importance': []})
 
 model = load_model()
 metrics = load_metrics()
@@ -36,13 +49,17 @@ df_imp = load_feature_importance()
 st.title("🎮 Roblox Game Success Prediction")
 st.markdown("Dashboard ini merupakan *deployment* dari model *Machine Learning* untuk memprediksi probabilitas kesuksesan game di platform Roblox.")
 
+if model is None:
+    st.error("⚠️ Model belum ditemukan! Pastikan file 'model/model.pkl' sudah tersedia.")
+    st.stop()
+
 # ==========================================
-# TABS SETUP
+# TABS 
 # ==========================================
 tab1, tab2, tab3 = st.tabs(["1️⃣ 🎮 Predictor", "2️⃣ 📊 Model Performance", "3️⃣ 📈 Data Insights"])
 
 # ------------------------------------------
-# TAB 1: PREDICTOR (Interaktif)
+# TAB 1: PREDICTOR 
 # ------------------------------------------
 with tab1:
     st.header("Predict Game Success")
@@ -58,7 +75,6 @@ with tab1:
         age_rec = st.selectbox("Age Recommendation", ['All Ages', '9+', '13+', '17+'])
         
         st.markdown("---")
-
         threshold = st.slider("Decision Threshold", min_value=0.1, max_value=0.9, value=0.5, step=0.05)
 
     if st.button("🚀 Predict Success"):
@@ -70,27 +86,30 @@ with tab1:
             'AgeRecommendation': [age_rec]
         })
 
-        prob = model.predict_proba(input_data)[0][1]
-        is_success = prob >= threshold
+        # Pastikan model memiliki atribut predict_proba sebelum dipanggil
+        try:
+            prob = model.predict_proba(input_data)[0][1]
+            is_success = prob >= threshold
 
-        st.markdown("### Prediction Result")
-        if is_success:
-            st.success("🔥 **PREDICTION: SUCCESS**")
-        else:
-            st.error("❄️ **PREDICTION: NOT SUCCESS**")
+            st.markdown("### Prediction Result")
+            if is_success:
+                st.success("🔥 **PREDICTION: SUCCESS**")
+            else:
+                st.error("❄️ **PREDICTION: NOT SUCCESS**")
+                
+            st.metric(label="Success Probability", value=f"{prob:.1%}")
             
-        st.metric(label="Success Probability", value=f"{prob:.1%}")
-        safe_prob = float(prob)
+            safe_prob = float(prob)
+            if safe_prob != safe_prob:  # Cek NaN
+                safe_prob = 0.0
 
-        if safe_prob != safe_prob:  # check NaN
-            safe_prob = 0.0
-
-        safe_prob = max(0.0, min(1.0, safe_prob))
-
-        st.progress(int(safe_prob * 100))
-        
-
-        st.caption("ℹ️ *Success is defined as being in the top 20% of active games.*")
+            safe_prob = max(0.0, min(1.0, safe_prob))
+            st.progress(int(safe_prob * 100))
+            
+            st.caption("ℹ️ *Success is defined as being in the top 20% of active games.*")
+            
+        except Exception as e:
+            st.error(f"Terjadi kesalahan saat memprediksi: {e}")
 
 # ------------------------------------------
 # TAB 2: MODEL PERFORMANCE 
@@ -99,28 +118,31 @@ with tab2:
     st.header("Model Evaluation")
     st.write("Performa model dievaluasi pada data uji (offline) menggunakan *stratified split*.")
     
-    col1, col2, col3, col4, col5 = st.columns(5)
-    
-    col1.metric("Accuracy", f"{float(metrics.get('accuracy', 0)):.2%}")
-    col2.metric("Precision", f"{float(metrics.get('precision', 0)):.2%}")
-    col3.metric("Recall", f"{float(metrics.get('recall', 0)):.2%}")
-    col4.metric("🏆 F1-Score (Primary)", f"{float(metrics.get('f1_score', 0)):.2%}")
-    col5.metric("ROC-AUC", f"{float(metrics.get('roc_auc', 0)):.2f}")
-    
+    if metrics:
+        col1, col2, col3, col4, col5 = st.columns(5)
+        
+        col1.metric("Accuracy", f"{float(metrics.get('accuracy', 0)):.2%}")
+        col2.metric("Precision", f"{float(metrics.get('precision', 0)):.2%}")
+        col3.metric("Recall", f"{float(metrics.get('recall', 0)):.2%}")
+        col4.metric("🏆 F1-Score (Primary)", f"{float(metrics.get('f1_score', 0)):.2%}")
+        col5.metric("ROC-AUC", f"{float(metrics.get('roc_auc', 0)):.2f}")
+    else:
+        st.warning("⚠️ File 'model/metrics.json' tidak ditemukan.")
+        
     st.markdown("---")
     
-
     col_img1, col_img2 = st.columns(2)
     with col_img1:
         if os.path.exists(cm_path):
-            st.image(cm_path, caption="Confusion Matrix pada Data Uji")
+            st.image(cm_path, caption="Confusion Matrix pada Data Uji", use_column_width=True)
         else:
-            st.error("confusion_matrix.png tidak ditemukan")    
+            st.error("❌ Gambar confusion_matrix.png tidak ditemukan pada folder 'assets'.")    
     with col_img2:
         if os.path.exists(cr_path):
-            st.image(cr_path, caption="ROC Curve pada Data Uji")
+            st.image(cr_path, caption="ROC Curve pada Data Uji", use_column_width=True)
         else:
-            st.error("roc_curve.png tidak ditemukan")
+            st.error("❌ Gambar roc_curve.png tidak ditemukan pada folder 'assets'.")
+
 # ------------------------------------------
 # TAB 3: DATA INSIGHTS
 # ------------------------------------------
@@ -128,16 +150,19 @@ with tab3:
     st.header("Feature Importance")
     st.write("Faktor mana yang paling menentukan kesuksesan sebuah game?")
     
-    top_10_imp = df_imp.head(10)
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(x='Importance', y='Feature', data=top_10_imp, palette='viridis', ax=ax)
-    plt.title("Top 10 Most Important Features", pad=10)
-    plt.xlabel("Importance Score")
-    plt.ylabel("Features")
-    plt.tight_layout()
-    
-    st.pyplot(fig)
-    
-    with st.expander("Lihat Data Tabel"):
-        st.dataframe(df_imp)
+    if not df_imp.empty:
+        top_10_imp = df_imp.head(10)
+        
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(x='Importance', y='Feature', data=top_10_imp, palette='viridis', ax=ax)
+        plt.title("Top 10 Most Important Features", pad=10)
+        plt.xlabel("Importance Score")
+        plt.ylabel("Features")
+        plt.tight_layout()
+        
+        st.pyplot(fig)
+        
+        with st.expander("Lihat Data Tabel"):
+            st.dataframe(df_imp)
+    else:
+        st.warning("⚠️ File 'model/feature_importance.csv' tidak ditemukan.")
