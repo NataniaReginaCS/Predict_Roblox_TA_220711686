@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# Konfigurasi halaman harus dipanggil pertama kali sebelum elemen Streamlit lainnya
 st.set_page_config(page_title="Roblox Game Success Predictor", page_icon="🎮", layout="wide")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,9 +13,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 cm_path = os.path.join(BASE_DIR, "assets", "confusion_matrix.png")
 cr_path = os.path.join(BASE_DIR, "assets", "roc_curve.png")
 
-# ==========================================
-# FUNGSI LOAD DATA & MODEL DENGAN ERROR HANDLING
-# ==========================================
 @st.cache_resource
 def load_model():
     try:
@@ -43,9 +39,6 @@ model = load_model()
 metrics = load_metrics()
 df_imp = load_feature_importance()
 
-# ==========================================
-# APP HEADER
-# ==========================================
 st.title("🎮 Roblox Game Success Prediction")
 st.markdown("Dashboard ini merupakan *deployment* dari model *Machine Learning* untuk memprediksi probabilitas kesuksesan game di platform Roblox.")
 
@@ -53,14 +46,8 @@ if model is None:
     st.error("⚠️ Model belum ditemukan! Pastikan file 'model/model.pkl' sudah tersedia.")
     st.stop()
 
-# ==========================================
-# TABS 
-# ==========================================
 tab1, tab2, tab3 = st.tabs(["1️⃣ 🎮 Predictor", "2️⃣ 📊 Model Performance", "3️⃣ 📈 Data Insights"])
 
-# ------------------------------------------
-# TAB 1: PREDICTOR 
-# ------------------------------------------
 with tab1:
     st.header("Predict Game Success")
     
@@ -86,7 +73,6 @@ with tab1:
             'AgeRecommendation': [age_rec]
         })
 
-        # Pastikan model memiliki atribut predict_proba sebelum dipanggil
         try:
             prob = model.predict_proba(input_data)[0][1]
             is_success = prob >= threshold
@@ -100,7 +86,7 @@ with tab1:
             st.metric(label="Success Probability", value=f"{prob:.1%}")
             
             safe_prob = float(prob)
-            if safe_prob != safe_prob:  # Cek NaN
+            if safe_prob != safe_prob:  
                 safe_prob = 0.0
 
             safe_prob = max(0.0, min(1.0, safe_prob))
@@ -111,9 +97,6 @@ with tab1:
         except Exception as e:
             st.error(f"Terjadi kesalahan saat memprediksi: {e}")
 
-# ------------------------------------------
-# TAB 2: MODEL PERFORMANCE 
-# ------------------------------------------
 with tab2:
     st.header("Model Evaluation")
     st.write("Performa model dievaluasi pada data uji (offline) menggunakan *stratified split*.")
@@ -143,9 +126,6 @@ with tab2:
         else:
             st.error("❌ Gambar roc_curve.png tidak ditemukan pada folder 'assets'.")
 
-# ------------------------------------------
-# TAB 3: DATA INSIGHTS
-# ------------------------------------------
 with tab3:
     st.header("Feature Importance")
     st.write("Faktor mana yang paling menentukan kesuksesan sebuah game?")
