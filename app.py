@@ -7,7 +7,7 @@ import seaborn as sns
 import json
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 
-
+# Set page config
 st.set_page_config(
     page_title="Roblox Game Success Predictor",
     page_icon="🎮",
@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # =====================================================
-# 1. LOAD MODEL
+# 1. LOAD MODEL & ARTIFACTS
 # =====================================================
 @st.cache_resource
 def load_model_and_artifacts():
@@ -32,7 +32,7 @@ def load_model_and_artifacts():
     try:
         df_imp = joblib.load('feature_importance_df.pkl')
     except FileNotFoundError:
-        pass 
+        pass
 
     return final_model, processed_df, X_test, y_test, y_pred, y_prob, metrics, roc_data, df_imp
 
@@ -62,6 +62,7 @@ with tab1:
 
     with st.form("prediction_form"):
         st.subheader("Informasi Game")
+
         col1, col2 = st.columns(2)
 
         with col1:
@@ -125,27 +126,21 @@ with tab2:
     st.subheader("Metrik Evaluasi")
     st.json(metrics)
 
-    st.markdown("""
-    **Penjelasan Confusion Matrix:**
-    - **TN (1351):** Tidak sukses → diprediksi tidak sukses
-    - **FP (109):** Tidak sukses → diprediksi sukses
-    - **FN (65):** Sukses → diprediksi tidak sukses
-    - **TP (422):** Sukses → diprediksi sukses
-    """)
-
     st.subheader("Confusion Matrix")
-    fig_cm, ax_cm = plt.subplots(figsize=(5, 4))  
+    st.markdown("**Interpretasi Confusion Matrix:** Tabel ini menunjukkan performa model dalam mengklasifikasikan game sukses dan tidak sukses. Nilai pada diagonal (kiri atas dan kanan bawah) adalah prediksi yang benar, sedangkan nilai di luar diagonal adalah kesalahan prediksi.")
+    fig_cm, ax_cm = plt.subplots(figsize=(5, 4)) 
     cm = confusion_matrix(y_test, y_pred)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=['Not Success', 'Success'],
-                yticklabels=['Not Success', 'Success'], ax=ax_cm)
+                xticklabels=['Tidak Sukses', 'Sukses'],
+                yticklabels=['Tidak Sukses', 'Sukses'], ax=ax_cm)
     ax_cm.set_title('Confusion Matrix')
-    ax_cm.set_ylabel('Actual')
-    ax_cm.set_xlabel('Predicted')
-    st.pyplot(fig_cm, use_container_width=True)  
+    ax_cm.set_ylabel('Aktual')
+    ax_cm.set_xlabel('Prediksi')
+    st.pyplot(fig_cm)
 
     st.subheader("Receiver Operating Characteristic (ROC) Curve")
-    fig_roc, ax_roc = plt.subplots(figsize=(5, 4))  
+    st.markdown("**Interpretasi ROC Curve & AUC:** Kurva ROC menggambarkan kemampuan model untuk membedakan antara kelas positif dan negatif. Nilai AUC (Area Under the Curve) sebesar {:.2f} menunjukkan bahwa model memiliki kemampuan diskriminasi yang sangat baik; semakin dekat ke 1, semakin baik model dalam membedakan antara game sukses dan tidak sukses.".format(metrics["roc_auc"]))
+    fig_roc, ax_roc = plt.subplots(figsize=(5, 4)) 
     fpr = roc_data['fpr']
     tpr = roc_data['tpr']
     ax_roc.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC Curve (AUC = {metrics["roc_auc"]:.2f})')
@@ -156,7 +151,7 @@ with tab2:
     ax_roc.set_ylabel('True Positive Rate')
     ax_roc.set_title('Receiver Operating Characteristic (ROC)')
     ax_roc.legend(loc="lower right")
-    st.pyplot(fig_roc, use_container_width=True)  
+    st.pyplot(fig_roc)
 
 # --- TAB 3: DATA INSIGHTS ---
 with tab3:
@@ -164,10 +159,12 @@ with tab3:
     st.markdown("Visualisasi dan statistik deskriptif dari dataset.")
 
     st.subheader("Statistik Deskriptif untuk Kolom Numerik")
+    st.markdown("**Interpretasi Statistik Deskriptif:** Tabel ini menyajikan ringkasan statistik dasar (rata-rata, standar deviasi, min, maks, kuartil) untuk semua fitur numerik dalam dataset, memberikan gambaran umum tentang distribusi dan rentang nilai data.")
     st.dataframe(df.describe())
 
     st.subheader("Visualisasi Distribusi Genre")
-    fig_genre, ax_genre = plt.subplots(figsize=(12, 6))
+    st.markdown("**Interpretasi Distribusi Genre:** Bar chart ini menunjukkan frekuensi atau jumlah game untuk setiap genre yang ada dalam dataset. Ini membantu memahami popularitas relatif dari berbagai kategori game Roblox.")
+    fig_genre, ax_genre = plt.subplots(figsize=(7, 5)) 
     sns.countplot(data=df, y='Genre', order=df['Genre'].value_counts().index, palette='viridis', ax=ax_genre, hue='Genre', legend=False)
     ax_genre.set_title('Distribution of Game Genres')
     ax_genre.set_xlabel('Count')
@@ -175,7 +172,8 @@ with tab3:
     st.pyplot(fig_genre)
 
     st.subheader("Visualisasi Matriks Korelasi Pearson")
-    fig_corr, ax_corr = plt.subplots(figsize=(14, 10))
+    st.markdown("**Interpretasi Matriks Korelasi Pearson:** Heatmap ini menampilkan koefisien korelasi Pearson antara setiap pasangan fitur numerik. Nilai mendekati 1 atau -1 menunjukkan hubungan linear yang kuat (positif atau negatif), sedangkan nilai mendekati 0 menunjukkan tidak ada hubungan linear. Ini membantu mengidentifikasi fitur yang saling bergantung.")
+    fig_corr, ax_corr = plt.subplots(figsize=(9, 7)) 
     numerical_cols = df.select_dtypes(include=[np.number]).columns
     corr_matrix = df[numerical_cols].corr(method='pearson')
     sns.heatmap(corr_matrix, annot=True, fmt='.2f', cmap='coolwarm', linewidths=.5, ax=ax_corr)
@@ -186,7 +184,8 @@ with tab3:
 
     if df_imp is not None:
         st.subheader("Top 10 Feature Importance (dari Random Forest)")
-        fig_imp, ax_imp = plt.subplots(figsize=(10, 6))
+        st.markdown("**Interpretasi Feature Importance:** Bar chart ini menampilkan 10 fitur yang paling berkontribusi dalam prediksi model Random Forest. Semakin tinggi 'Importance', semakin besar pengaruh fitur tersebut terhadap hasil prediksi kesuksesan game.")
+        fig_imp, ax_imp = plt.subplots(figsize=(7, 5)) 
         sns.barplot(x='Importance', y='Fitur', data=df_imp.head(10), palette='viridis', ax=ax_imp, hue='Fitur', legend=False)
         ax_imp.set_title('Top 10 Feature Importance - Random Forest')
         st.pyplot(fig_imp)
