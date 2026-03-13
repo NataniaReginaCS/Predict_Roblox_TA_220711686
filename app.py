@@ -7,15 +7,56 @@ import seaborn as sns
 import json
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 3rem !important;
+        font-weight: 700 !important;
+        color: #1f77b4 !important;
+        text-align: center;
+        margin-bottom: 2rem !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 15px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    .success-box {
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        padding: 2rem;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(86,171,47,0.3);
+    }
+    .error-box {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        padding: 2rem;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(255,107,107,0.3);
+    }
+    .stats-metric {
+        font-size: 2.5rem !important;
+        font-weight: 800 !important;
+        color: #1f77b4 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Set page config
 st.set_page_config(
-    page_title="Roblox Game Success Predictor",
+    page_title="🎮 Roblox Game Success Predictor",
     page_icon="🎮",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # =====================================================
-# 1. LOAD MODEL & ARTIFACTS
+# LOAD MODEL 
 # =====================================================
 @st.cache_resource
 def load_model_and_artifacts():
@@ -38,156 +79,222 @@ def load_model_and_artifacts():
 
 final_model, df, X_test, y_test, y_pred, y_prob, metrics, roc_data, df_imp = load_model_and_artifacts()
 
-preprocessor_pipeline = final_model.named_steps['preprocessor']
-feature_selector_pipeline = final_model.named_steps['feature_selection']
-
+# Fitur 
 fitur_numerik = ['game_age', 'update_gap_days', 'visit_velocity', 'favorite_rate', 'engagement_rate', 'like_ratio']
 fitur_kategorik = ['Genre', 'AgeRecommendation']
-
 unique_genres = df['Genre'].dropna().unique().tolist()
 unique_age_recommendations = df['AgeRecommendation'].dropna().unique().tolist()
 
 # =====================================================
-# STREAMLIT 
+# SIDEBAR
 # =====================================================
-st.title("🚀 Roblox Game Success Predictor")
-st.markdown("Selamat datang di aplikasi prediksi kesuksesan game Roblox!")
+with st.sidebar:
+    st.markdown("## 🎯 Kontrol")
+    st.info("**Model Terbaik:** Random Forest")
+    st.success(f"**F1-Score Test:** {metrics['f1_score']:.4f}")
+    st.caption("Aplikasi prediksi kesuksesan game Roblox berbasis ML")
 
-tab1, tab2, tab3 = st.tabs(["1️⃣ 🎮 Predictor", "2️⃣ 📊 Model Performance", "3️⃣ 📈 Data Insights"])
+# =====================================================
+# MAIN PAGE
+# =====================================================
+st.markdown('<h1 class="main-header">🚀 Roblox Game Success Predictor</h1>', unsafe_allow_html=True)
+st.markdown("### *Prediksi tingkat kesuksesan game Roblox menggunakan Random Forest*")
 
-# --- TAB 1: PREDICTOR ---
+col1, col2 = st.columns([3, 1])
+with col2:
+    st.markdown("### 📈 **Quick Stats**")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.metric("Accuracy", f"{metrics['accuracy']:.1%}", delta=f"+{metrics['f1_score']:.1%}")
+    with col_b:
+        st.metric("AUC-ROC", f"{metrics['roc_auc']:.3f}")
+
+tab1, tab2, tab3 = st.tabs(["🎮 **Prediksi Game**", "📊 **Model Analytics**", "📈 **Data Explorer**"])
+
+# =====================================================
+# TAB 1: PREDICTOR
+# =====================================================
 with tab1:
-    st.header("🎮 Prediksi Kesuksesan Game")
-    st.markdown("Masukkan fitur-fitur game di bawah untuk memprediksi apakah game tersebut akan sukses atau tidak.")
-
-    with st.form("prediction_form"):
-        st.subheader("Informasi Game")
-
+    st.markdown("---")
+    
+    # Input form dengan gradient cards
+    with st.form("prediction_form", clear_on_submit=True):
+        st.markdown("#### 🔧 **Input Data Game**")
+        
         col1, col2 = st.columns(2)
-
         with col1:
-            genre = st.selectbox("Genre", options=unique_genres)
-            age_recommendation = st.selectbox("Rekomendasi Usia", options=unique_age_recommendations)
-            game_age = st.number_input("Usia Game (hari)", min_value=0, value=300)
-            update_gap_days = st.number_input("Gap Hari Update Terakhir (hari)", min_value=0, value=60)
-
+            st.markdown("**📋 Informasi Dasar**")
+            genre = st.selectbox("🎨 Genre", options=unique_genres, 
+                                help="Pilih kategori genre game")
+            age_rec = st.selectbox("👶 Rekomendasi Usia", options=unique_age_recommendations)
+            
         with col2:
-            visits = st.number_input("Jumlah Kunjungan (Visits)", min_value=0.0, value=100000.0, step=1000.0)
-            favorites = st.number_input("Jumlah Favorit (Favorites)", min_value=0.0, value=5000.0, step=100.0)
-            likes = st.number_input("Jumlah Suka (Likes)", min_value=0.0, value=10000.0, step=100.0)
-            dislikes = st.number_input("Jumlah Tidak Suka (Dislikes)", min_value=0.0, value=1000.0, step=100.0)
+            st.markdown("**📊 Metrik Engagement**")
+            game_age = st.number_input("📅 Usia Game (hari)", min_value=0, value=300)
+            visits = st.number_input("👥 Total Visits", min_value=0.0, value=100000.0, step=1000.0)
+            favorites = st.number_input("❤️ Favorites", min_value=0.0, value=5000.0, step=100.0)
+            
+        col3, col4 = st.columns(2)
+        with col3:
+            likes = st.number_input("👍 Likes", min_value=0.0, value=10000.0, step=100.0)
+            dislikes = st.number_input("👎 Dislikes", min_value=0.0, value=1000.0, step=100.0)
+        with col4:
+            update_gap = st.number_input("🔄 Gap Update (hari)", min_value=0, value=60)
+        
+        submitted = st.form_submit_button("🎯 **Prediksi Sekarang**", 
+                                        use_container_width=True,
+                                        help="Klik untuk memproses prediksi")
 
-        submitted = st.form_submit_button("Prediksi Kesuksesan")
+    if submitted:
+        # Calculate engineered features
+        visit_velocity = np.log1p(visits / (game_age + 1))
+        favorite_rate = np.log1p(favorites / (visits + 1))
+        engagement_rate = np.log1p((likes + dislikes) / (visits + 1))
+        like_ratio = likes / (likes + dislikes + 1)
+        update_gap_days = np.log1p(update_gap)
 
-        if submitted:
-            # Re-calculating engineered features based on raw inputs
-            calculated_game_age = game_age
-            calculated_update_gap_days = update_gap_days
+        input_data = pd.DataFrame({
+            'game_age': [game_age],
+            'update_gap_days': [update_gap_days],
+            'visit_velocity': [visit_velocity],
+            'favorite_rate': [favorite_rate],
+            'engagement_rate': [engagement_rate],
+            'like_ratio': [like_ratio],
+            'Genre': [genre],
+            'AgeRecommendation': [age_rec]
+        })
 
-            # Handle division by zero for rates
-            calculated_visit_velocity = visits / (calculated_game_age + 1) if (calculated_game_age + 1) != 0 else 0
-            calculated_favorite_rate = favorites / (visits + 1) if (visits + 1) != 0 else 0
-            calculated_engagement_rate = (likes + dislikes) / (visits + 1) if (visits + 1) != 0 else 0
-            calculated_like_ratio = likes / (likes + dislikes + 1) if (likes + dislikes + 1) != 0 else 0
+        # Predict
+        pred = final_model.predict(input_data)[0]
+        prob_success = final_model.predict_proba(input_data)[:, 1][0]
 
-            # Apply log1p transformation as done in the notebook for some features
-            calculated_visit_velocity = np.log1p(calculated_visit_velocity)
-            calculated_favorite_rate = np.log1p(calculated_favorite_rate)
-            calculated_engagement_rate = np.log1p(calculated_engagement_rate)
-            calculated_update_gap_days = np.log1p(calculated_update_gap_days)
+        # Beautiful result display
+        st.markdown("---")
+        st.markdown("#### 🎉 **Hasil Prediksi**")
+        
+        if pred == 1:
+            st.markdown(f"""
+            <div class="success-box">
+                <h2>✅ **GAME SUKSES!**</h2>
+                <h3>🎊 Probabilitas: <span class="stats-metric">{prob_success:.1%}</span></h3>
+                <p>Game ini memiliki potensi tinggi untuk menjadi hits di Roblox!</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="error-box">
+                <h2>❌ **Tidak Sukses**</h2>
+                <h3>📉 Probabilitas Sukses: <span class="stats-metric">{prob_success:.1%}</span></h3>
+                <p>Perlu optimasi strategi untuk meningkatkan performa.</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-            # Create a DataFrame for prediction
-            input_data = pd.DataFrame({
-                'game_age': [calculated_game_age],
-                'update_gap_days': [calculated_update_gap_days],
-                'visit_velocity': [calculated_visit_velocity],
-                'favorite_rate': [calculated_favorite_rate],
-                'engagement_rate': [calculated_engagement_rate],
-                'like_ratio': [calculated_like_ratio],
-                'Genre': [genre],
-                'AgeRecommendation': [age_recommendation]
-            })
-
-            # Predict
-            prediction = final_model.predict(input_data)
-            prediction_proba = final_model.predict_proba(input_data)[:, 1]
-
-            st.subheader("Hasil Prediksi")
-            if prediction[0] == 1:
-                st.success(f"Game ini **diprediksi Sukses**! (Probabilitas Sukses: {prediction_proba[0]:.2f})")
-            else:
-                st.error(f"Game ini **diprediksi Tidak Sukses**. (Probabilitas Sukses: {prediction_proba[0]:.2f})")
-
-# --- TAB 2: MODEL PERFORMANCE ---
+# =====================================================
+# TAB 2: MODEL PERFORMANCE
+# =====================================================
 with tab2:
-    st.header("📊 Kinerja Model")
-    st.markdown("Metrik evaluasi dan visualisasi kinerja dari model terbaik.")
+    st.markdown("---")
+    
+    # Metrics Cards
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>F1-Score</h3>
+            <h1>{:.3f}</h1>
+        </div>
+        """.format(metrics['f1_score']), unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>Accuracy</h3>
+            <h1>{:.1%}</h1>
+        </div>
+        """.format(metrics['accuracy']), unsafe_allow_html=True)
+    with col3:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>AUC-ROC</h3>
+            <h1>{:.3f}</h1>
+        </div>
+        """.format(metrics['roc_auc']), unsafe_allow_html=True)
+    with col4:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>Precision</h3>
+            <h1>{:.3f}</h1>
+        </div>
+        """.format(metrics['precision']), unsafe_allow_html=True)
 
-    st.subheader("Metrik Evaluasi")
-    st.json(metrics)
+    # Visualizations
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("🔍 Confusion Matrix")
+        fig_cm, ax = plt.subplots(figsize=(6, 5))
+        cm = confusion_matrix(y_test, y_pred)
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                    xticklabels=['❌ Tidak Sukses', '✅ Sukses'],
+                    yticklabels=['❌ Aktual', '✅ Aktual'], ax=ax,
+                    cbar_kws={'label': 'Jumlah'})
+        ax.set_title('Confusion Matrix', fontsize=14, fontweight='bold')
+        st.pyplot(fig_cm)
+    
+    with col2:
+        st.subheader("📈 ROC Curve")
+        fig_roc, ax = plt.subplots(figsize=(6, 5))
+        fpr, tpr = roc_data['fpr'], roc_data['tpr']
+        ax.plot(fpr, tpr, color='#1f77b4', lw=3, 
+                label=f'ROC Curve (AUC = {metrics["roc_auc"]:.3f})')
+        ax.plot([0, 1], [0, 1], color='gray', lw=2, linestyle='--', alpha=0.7)
+        ax.set_xlim([0.0, 1.0]); ax.set_ylim([0.0, 1.05])
+        ax.set_xlabel('False Positive Rate'); ax.set_ylabel('True Positive Rate')
+        ax.legend(loc="lower right", fontsize=11); ax.grid(True, alpha=0.3)
+        ax.set_title('ROC Curve', fontsize=14, fontweight='bold')
+        st.pyplot(fig_roc)
 
-    st.subheader("Confusion Matrix")
-    st.markdown("**Interpretasi Confusion Matrix:** Tabel ini menunjukkan performa model dalam mengklasifikasikan game sukses dan tidak sukses. Nilai pada diagonal (kiri atas dan kanan bawah) adalah prediksi yang benar, sedangkan nilai di luar diagonal adalah kesalahan prediksi.")
-    fig_cm, ax_cm = plt.subplots(figsize=(5, 4)) 
-    cm = confusion_matrix(y_test, y_pred)
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=['Tidak Sukses', 'Sukses'],
-                yticklabels=['Tidak Sukses', 'Sukses'], ax=ax_cm)
-    ax_cm.set_title('Confusion Matrix')
-    ax_cm.set_ylabel('Aktual')
-    ax_cm.set_xlabel('Prediksi')
-    st.pyplot(fig_cm)
-
-    st.subheader("Receiver Operating Characteristic (ROC) Curve")
-    st.markdown("**Interpretasi ROC Curve & AUC:** Kurva ROC menggambarkan kemampuan model untuk membedakan antara kelas positif dan negatif. Nilai AUC (Area Under the Curve) sebesar {:.2f} menunjukkan bahwa model memiliki kemampuan diskriminasi yang sangat baik; semakin dekat ke 1, semakin baik model dalam membedakan antara game sukses dan tidak sukses.".format(metrics["roc_auc"]))
-    fig_roc, ax_roc = plt.subplots(figsize=(5, 4)) 
-    fpr = roc_data['fpr']
-    tpr = roc_data['tpr']
-    ax_roc.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC Curve (AUC = {metrics["roc_auc"]:.2f})')
-    ax_roc.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    ax_roc.set_xlim([0.0, 1.0])
-    ax_roc.set_ylim([0.0, 1.05])
-    ax_roc.set_xlabel('False Positive Rate')
-    ax_roc.set_ylabel('True Positive Rate')
-    ax_roc.set_title('Receiver Operating Characteristic (ROC)')
-    ax_roc.legend(loc="lower right")
-    st.pyplot(fig_roc)
-
-# --- TAB 3: DATA INSIGHTS ---
+# =====================================================
+# TAB 3: DATA INSIGHTS
+# =====================================================
 with tab3:
-    st.header("📈 Data Insights")
-    st.markdown("Visualisasi dan statistik deskriptif dari dataset.")
+    st.markdown("---")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("🎨 Distribusi Genre")
+        fig_genre, ax = plt.subplots(figsize=(8, 5))
+        genre_counts = df['Genre'].value_counts().head(10)
+        colors = plt.cm.Set3(np.linspace(0, 1, len(genre_counts)))
+        bars = ax.barh(genre_counts.index, genre_counts.values, color=colors)
+        ax.set_xlabel('Jumlah Game'); ax.set_title('Top 10 Game Genres', fontweight='bold')
+        for i, bar in enumerate(bars):
+            width = bar.get_width()
+            ax.text(width + 10, bar.get_y() + bar.get_height()/2, 
+                    f'{int(width)}', va='center', fontsize=10)
+        plt.tight_layout()
+        st.pyplot(fig_genre)
+    
+    with col2:
+        if df_imp is not None:
+            st.subheader("🏆 Top Features")
+            fig_imp, ax = plt.subplots(figsize=(8, 5))
+            top_features = df_imp.head(8)
+            colors = plt.cm.viridis(np.linspace(0, 1, len(top_features)))
+            bars = ax.barh(range(len(top_features)), top_features['Importance'], 
+                            color=colors, alpha=0.8)
+            ax.set_yticks(range(len(top_features)))
+            ax.set_yticklabels(top_features['Fitur'])
+            ax.set_xlabel('Importance Score')
+            ax.set_title('Top 8 Feature Importance', fontweight='bold')
+            for i, bar in enumerate(bars):
+                width = bar.get_width()
+                ax.text(width + 0.001, i, f'{width:.3f}', va='center', fontsize=10)
+            plt.tight_layout()
+            st.pyplot(fig_imp)
+        else:
+            st.info("📊 Feature importance tidak tersedia")
 
-    st.subheader("Statistik Deskriptif untuk Kolom Numerik")
-    st.markdown("**Interpretasi Statistik Deskriptif:** Tabel ini menyajikan ringkasan statistik dasar (rata-rata, standar deviasi, min, maks, kuartil) untuk semua fitur numerik dalam dataset, memberikan gambaran umum tentang distribusi dan rentang nilai data.")
-    st.dataframe(df.describe())
-
-    st.subheader("Visualisasi Distribusi Genre")
-    st.markdown("**Interpretasi Distribusi Genre:** Bar chart ini menunjukkan frekuensi atau jumlah game untuk setiap genre yang ada dalam dataset. Ini membantu memahami popularitas relatif dari berbagai kategori game Roblox.")
-    fig_genre, ax_genre = plt.subplots(figsize=(7, 5)) 
-    sns.countplot(data=df, y='Genre', order=df['Genre'].value_counts().index, palette='viridis', ax=ax_genre, hue='Genre', legend=False)
-    ax_genre.set_title('Distribution of Game Genres')
-    ax_genre.set_xlabel('Count')
-    ax_genre.set_ylabel('Genre')
-    st.pyplot(fig_genre)
-
-    st.subheader("Visualisasi Matriks Korelasi Pearson")
-    st.markdown("**Interpretasi Matriks Korelasi Pearson:** Heatmap ini menampilkan koefisien korelasi Pearson antara setiap pasangan fitur numerik. Nilai mendekati 1 atau -1 menunjukkan hubungan linear yang kuat (positif atau negatif), sedangkan nilai mendekati 0 menunjukkan tidak ada hubungan linear. Ini membantu mengidentifikasi fitur yang saling bergantung.")
-    fig_corr, ax_corr = plt.subplots(figsize=(9, 7)) 
-    numerical_cols = df.select_dtypes(include=[np.number]).columns
-    corr_matrix = df[numerical_cols].corr(method='pearson')
-    sns.heatmap(corr_matrix, annot=True, fmt='.2f', cmap='coolwarm', linewidths=.5, ax=ax_corr)
-    ax_corr.set_title('Pearson Correlation Matrix of Numerical Features')
-    ax_corr.tick_params(axis='x', rotation=45)
-    ax_corr.tick_params(axis='y', rotation=0)
-    st.pyplot(fig_corr)
-
-    if df_imp is not None:
-        st.subheader("Top 10 Feature Importance (dari Random Forest)")
-        st.markdown("**Interpretasi Feature Importance:** Bar chart ini menampilkan 10 fitur yang paling berkontribusi dalam prediksi model Random Forest. Semakin tinggi 'Importance', semakin besar pengaruh fitur tersebut terhadap hasil prediksi kesuksesan game.")
-        fig_imp, ax_imp = plt.subplots(figsize=(7, 5)) 
-        sns.barplot(x='Importance', y='Fitur', data=df_imp.head(10), palette='viridis', ax=ax_imp, hue='Fitur', legend=False)
-        ax_imp.set_title('Top 10 Feature Importance - Random Forest')
-        st.pyplot(fig_imp)
-    else:
-        st.info("Feature importance tidak tersedia karena model terbaik bukan Random Forest.")
+    st.subheader("📋 Dataset Overview")
+    st.dataframe(df.describe()[['mean', 'std', 'min', 'max']].round(3), 
+                use_container_width=True)
