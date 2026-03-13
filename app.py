@@ -125,8 +125,16 @@ with tab2:
     st.subheader("Metrik Evaluasi")
     st.json(metrics)
 
+    st.markdown("""
+    **Penjelasan Confusion Matrix:**
+    - **TN (1351):** Tidak sukses → diprediksi tidak sukses
+    - **FP (109):** Tidak sukses → diprediksi sukses
+    - **FN (65):** Sukses → diprediksi tidak sukses
+    - **TP (422):** Sukses → diprediksi sukses
+    """)
+
     st.subheader("Confusion Matrix")
-    fig_cm, ax_cm = plt.subplots(figsize=(8, 6))  
+    fig_cm, ax_cm = plt.subplots(figsize=(5, 4))  
     cm = confusion_matrix(y_test, y_pred)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=['Not Success', 'Success'],
@@ -137,7 +145,7 @@ with tab2:
     st.pyplot(fig_cm, use_container_width=True)  
 
     st.subheader("Receiver Operating Characteristic (ROC) Curve")
-    fig_roc, ax_roc = plt.subplots(figsize=(8, 6))  
+    fig_roc, ax_roc = plt.subplots(figsize=(5, 4))  
     fpr = roc_data['fpr']
     tpr = roc_data['tpr']
     ax_roc.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC Curve (AUC = {metrics["roc_auc"]:.2f})')
