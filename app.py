@@ -7,7 +7,7 @@ import seaborn as sns
 import json
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 
-# Set page config
+
 st.set_page_config(
     page_title="Roblox Game Success Predictor",
     page_icon="🎮",
@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # =====================================================
-# 1. LOAD MODEL & ARTIFACTS
+# 1. LOAD MODEL
 # =====================================================
 @st.cache_resource
 def load_model_and_artifacts():
@@ -28,31 +28,27 @@ def load_model_and_artifacts():
     metrics = joblib.load('metrics.pkl')
     roc_data = joblib.load('roc_data.pkl')
 
-    # Try to load feature importance, it might not exist if RF wasn't best model
     df_imp = None
     try:
         df_imp = joblib.load('feature_importance_df.pkl')
     except FileNotFoundError:
-        pass # Handle case where file doesn't exist
+        pass 
 
     return final_model, processed_df, X_test, y_test, y_pred, y_prob, metrics, roc_data, df_imp
 
 final_model, df, X_test, y_test, y_pred, y_prob, metrics, roc_data, df_imp = load_model_and_artifacts()
 
-# Extract preprocessor and feature selection from the final model pipeline
 preprocessor_pipeline = final_model.named_steps['preprocessor']
 feature_selector_pipeline = final_model.named_steps['feature_selection']
 
-# Define feature lists (hardcoded for Streamlit app if not saved)
 fitur_numerik = ['game_age', 'update_gap_days', 'visit_velocity', 'favorite_rate', 'engagement_rate', 'like_ratio']
 fitur_kategorik = ['Genre', 'AgeRecommendation']
 
-# Get unique values for categorical features from the processed_df for input options
 unique_genres = df['Genre'].dropna().unique().tolist()
 unique_age_recommendations = df['AgeRecommendation'].dropna().unique().tolist()
 
 # =====================================================
-# STREAMLIT UI
+# STREAMLIT 
 # =====================================================
 st.title("🚀 Roblox Game Success Predictor")
 st.markdown("Selamat datang di aplikasi prediksi kesuksesan game Roblox!")
@@ -83,16 +79,6 @@ with tab1:
         submitted = st.form_submit_button("Prediksi Kesuksesan")
 
         if submitted:
-            # Re-create engineered features from raw input
-            # Note: For simplicity, assuming these are the original raw values
-            # In a real-world scenario, you'd apply the same feature engineering logic as in notebook
-            # For this app, we'll map directly to the engineered feature names for consistency
-
-            # Example for visit_velocity, favorite_rate, engagement_rate, like_ratio calculation
-            # Need to use the raw visits, likes, dislikes, game_age to re-calculate these.
-            # For simplicity in Streamlit, I'm assuming the *engineered* values are directly input or re-calculated.
-            # Let's adjust to take engineered feature values directly or re-engineer on the fly
-
             # Re-calculating engineered features based on raw inputs
             calculated_game_age = game_age
             calculated_update_gap_days = update_gap_days
