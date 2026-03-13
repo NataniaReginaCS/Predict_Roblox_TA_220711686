@@ -1,4 +1,13 @@
 import streamlit as st
+
+# Set page config
+st.set_page_config(
+    page_title="🎮 Roblox Game Success Predictor",
+    page_icon="🎮",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import pandas as pd
 import numpy as np
 import joblib
@@ -46,14 +55,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-# Set page config
-st.set_page_config(
-    page_title="🎮 Roblox Game Success Predictor",
-    page_icon="🎮",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # =====================================================
 # LOAD MODEL 
