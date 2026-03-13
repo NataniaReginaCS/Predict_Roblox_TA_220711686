@@ -2,7 +2,7 @@ import streamlit as st
 
 # Set page config
 st.set_page_config(
-    page_title="🎮 Roblox Game Success Predictor",
+    page_title="🎮 Roblox Game Success Classification",
     page_icon="🎮",
     layout="wide",
     initial_sidebar_state="expanded"
