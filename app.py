@@ -33,14 +33,13 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
     text-align: center;
     margin: 1rem 0 2rem 0 !important;
-    text-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    color: white !important;
+    text-shadow: 0 4px 8px rgba(0,0,0,0.1);x
 }
 
 /* Metric Cards */
 .metric-card {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 1.5rem;
+    padding: 0.5rem;
     border-radius: 16px;
     color: white;
     text-align: center;
@@ -74,7 +73,7 @@ st.markdown("""
 .stats-metric {
     font-size: 2.5rem !important;
     font-weight: 900 !important;
-    color: #1f77b4 !important;
+    color: white !important;
     text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -153,20 +152,20 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>🎯 F1-Score</h3>
-        <h2 style='font-size:2.5rem; font-weight:900;'>{metrics['f1_score']:.3f}</h2>
+        <h4>🎯 F1-Score</h4>
+        <h2 style='font-size:1rem; font-weight:500;'>{metrics['f1_score']:.3f}</h2>
     </div>""", unsafe_allow_html=True)
 with col2:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>✅ Accuracy</h3>
-        <h2 style='font-size:2.5rem; font-weight:900;'>{metrics['accuracy']:.1%}</h2>
+        <h4>✅ Accuracy</h4>
+        <h2 style='font-size:1rem; font-weight:500;'>{metrics['accuracy']:.1%}</h2>
     </div>""", unsafe_allow_html=True)
 with col3:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>📈 ROC-AUC</h3>
-        <h2 style='font-size:2.5rem; font-weight:900; '>{metrics['roc_auc']:.3f}</h2>
+        <h4>📈 ROC-AUC</h4>
+        <h2 style='font-size:1rem; font-weight:500; '>{metrics['roc_auc']:.3f}</h2>
     </div>""", unsafe_allow_html=True)
 
 # =====================================================
@@ -178,16 +177,6 @@ tab1, tab2, tab3 = st.tabs([
     "📊 Model Analytics", 
     "📈 Data Explorer"
 ])
-
-st.markdown("""
-<style>
-.stTabs [data-baseweb="tab"] > div {
-    font-size: 1.5rem !important;
-    font-weight: 700 !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # =====================================================
 # TAB 1: PREDICTOR 
 # =====================================================
@@ -232,25 +221,21 @@ with tab1:
 
             pred = final_model.predict(input_df)[0]
             prob = final_model.predict_proba(input_df)[:, 1][0]
-
-        # Progress bar
-        st.progress(min(prob, 1.0))
-        st.success(f"**Success Probability: {prob:.1%}**")
         
         # Display result
         if pred == 1:
             st.markdown(f"""
             <div class="success-box">
-                <h2>🎉 **HIGH SUCCESS POTENTIAL!**</h2>
+                <h2>🎉 HIGH SUCCESS POTENTIAL!</h2>
                 <h3 style='color:#2d5a2a; font-size:2rem;'>
                     <span class="stats-metric">{prob:.1%}</span>
                 </h3>
-                <p>🚀 This game has **viral potential** on Roblox!</p>
+                <p>🚀 This game has viral potential on Roblox!</p>
             </div>""", unsafe_allow_html=True)
         else:
             st.markdown(f"""
             <div class="error-box">
-                <h2>⚠️ **Needs Optimization**</h2>
+                <h2>⚠️ Needs Optimization </h2>
                 <h3 style='color:#8b1a1a; font-size:2rem;'>
                     <span class="stats-metric">{prob:.1%}</span>
                 </h3>
@@ -282,8 +267,8 @@ with tab2:
             ax.text(bar.get_x() + bar.get_width()/2., height + 20,
                     f'{int(height)}', ha='center', va='bottom', fontweight='bold', fontsize=9)
         plt.tight_layout()
-        with st.container():
-            st.pyplot(fig, use_container_width=True, height=180)
+        st.pyplot(fig)
+
     with col_desc:
         st.markdown("""
         <div style='font-size:1.1rem;'>
