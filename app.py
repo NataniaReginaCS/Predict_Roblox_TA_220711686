@@ -1,4 +1,14 @@
 import streamlit as st
+
+# =====================================================
+# PAGE CONFIG
+# =====================================================
+st.set_page_config(
+    page_title="🎮 Roblox Game Success Predictor",
+    page_icon="🎮",
+    layout="wide"
+)
+
 import pandas as pd
 import numpy as np
 import joblib
@@ -9,37 +19,50 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# Page config
-st.set_page_config(
-    page_title="🎮 Roblox Game Success Predictor",
-    page_icon="🎮",
-    layout="wide"
-)
-
-# CSS
+# =====================================================
+# PREMIUM CUSTOM CSS (Mobile-First)
+# =====================================================
 st.markdown("""
 <style>
+/* Header */
 .main-header {
     font-size: clamp(2rem, 5vw, 3rem) !important;
     font-weight: 800 !important;
-    color: #1f77b4 !important;
     text-align: center;
     margin: 1rem 0 2rem 0 !important;
+    color: #1f77b4 !important;
 }
+
+/* Metric Cards */
 .metric-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 1.5rem;
-    border-radius: 16px;
-    color: white;
-    text-align: center;
-    box-shadow: 0 10px 40px rgba(102,126,234,0.3);
+    background: linear-gradient(135deg,#ffffff,#f8f9fa);
+    border-radius:12px;
+    padding:18px;
+    text-align:center;
+    box-shadow:0px 3px 8px rgba(0,0,0,0.08);
+    border:1px solid #e6e6e6;
 }
+
+.metric-card h3{
+    margin:0;
+    font-size:0.9rem;
+    color:#555;
+}
+
+.metric-card h2{
+    font-size:1.8rem;
+    font-weight:700;
+    color:#1f77b4;
+}
+
+/* Result Boxes */
 .success-box {
     background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
     padding: 2rem;
     border-radius: 20px;
     text-align: center;
     box-shadow: 0 12px 48px rgba(86,171,47,0.3);
+    border: 3px solid rgba(255,255,255,0.3);
 }
 .error-box {
     background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
@@ -47,7 +70,18 @@ st.markdown("""
     border-radius: 20px;
     text-align: center;
     box-shadow: 0 12px 48px rgba(255,107,107,0.3);
+    border: 3px solid rgba(255,255,255,0.3);
 }
+
+/* Stats */
+.stats-metric {
+    font-size: 2.5rem !important;
+    font-weight: 900 !important;
+    color: white !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Button */
 .stButton > button {
     background: linear-gradient(135deg, #1f77b4 0%, #4a90e2 100%);
     color: white;
@@ -56,11 +90,18 @@ st.markdown("""
     padding: 0.75rem 2rem;
     font-weight: 600;
     font-size: 1.1rem;
+    transition: all 0.3s ease;
     box-shadow: 0 4px 20px rgba(31,119,180,0.3);
 }
+.stButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(31,119,180,0.4);
+}
+
+/* Mobile Responsive */
 @media (max-width: 768px) {
-    .metric-card { padding: 1rem !important; }
-    .success-box, .error-box { padding: 1.5rem !important; }
+    .metric-card { padding: 1rem 0.75rem !important; margin: 0.5rem 0; }
+    .success-box, .error-box { padding: 1.5rem 1rem !important; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -76,25 +117,64 @@ def load_model_and_artifacts():
         X_test = joblib.load("X_test.pkl")
         y_test = joblib.load("y_test.pkl")
         y_pred = joblib.load("y_pred.pkl")
+        y_prob = joblib.load("y_prob.pkl")
         metrics = joblib.load("metrics.pkl")
         roc_data = joblib.load("roc_data.pkl")
-        
-        # feature importance
-        df_imp = pd.DataFrame()
+
+        df_imp = None
         try:
             df_imp = joblib.load("feature_importance_df.pkl")
         except:
             pass
-            
-        return final_model, df, X_test, y_test, y_pred, metrics, roc_data, df_imp
+
+        return final_model, df, X_test, y_test, y_pred, y_prob, metrics, roc_data, df_imp
     except Exception as e:
-        st.error(f"🚨 Model files missing. Upload: final_model.pkl, processed_df.pkl, etc.")
+        st.error(f"🚨 **Model loading failed:** {str(e)}")
         st.stop()
 
-# Load 
-final_model, df, X_test, y_test, y_pred, metrics, roc_data, df_imp = load_model_and_artifacts()
+final_model, df, X_test, y_test, y_pred, y_prob, metrics, roc_data, df_imp = load_model_and_artifacts()
 baseline_prob = float(np.mean(y_test))
 
+def explain_prediction(model_pipeline, original_input_df, feature_cols):
+    try:
+        preprocessor = model_pipeline.named_steps['preprocessor']
+        feature_selection = model_pipeline.named_steps['feature_selection']
+        rf_model = model_pipeline.named_steps['model']
+
+        transformed_input = preprocessor.transform(original_input_df)
+        
+        preprocessed_feature_names = preprocessor.get_feature_names_out()
+
+        selected_feature_mask = feature_selection.get_support()
+        final_selected_feature_names = preprocessed_feature_names[selected_feature_mask]
+        
+        importances = rf_model.feature_importances_
+        
+        feature_importance_map = dict(zip(final_selected_feature_names, importances))
+
+        contributions = []
+        transformed_input_df = pd.DataFrame(transformed_input[:, selected_feature_mask], columns=final_selected_feature_names)
+
+        for col_name in final_selected_feature_names:
+            value = transformed_input_df[col_name].iloc[0]
+            importance_score = feature_importance_map.get(col_name, 0)
+            contrib = value * importance_score
+
+            contributions.append({
+                "feature": col_name,
+                "contribution": contrib
+            })
+
+        exp_df = pd.DataFrame(contributions)
+        exp_df["abs_contribution"] = exp_df["contribution"].abs()
+        exp_df = exp_df.sort_values("abs_contribution", ascending=False)
+        exp_df = exp_df.drop(columns="abs_contribution")
+        return exp_df.head(5)
+
+    except Exception as e:
+        st.error(f"Error generating explanation: {e}")
+        return None
+    
 # Data prep
 unique_genres = sorted(df.get("Genre", pd.Series()).dropna().unique().tolist())
 unique_ages = sorted(df.get("AgeRecommendation", pd.Series()).dropna().unique().tolist())
@@ -105,63 +185,98 @@ unique_ages = sorted(df.get("AgeRecommendation", pd.Series()).dropna().unique().
 st.markdown('<h1 class="main-header">🚀 Roblox Game Success Predictor</h1>', unsafe_allow_html=True)
 st.markdown(f"""
 <div style='text-align:center; color:#666; font-size:1.2rem; margin-bottom:2rem;'>
-    AI-powered prediction using <strong>Random Forest</strong> | F1: {metrics['f1_score']:.3f}
+    Prediksi kesuksesan game Roblox menggunakan <strong>Random Forest</strong><br>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("### 📊 Model Performance")
+# =====================================================
+# PERFORMANCE METRICS
+# =====================================================
+st.markdown("### 📊 **Model Performance Overview**")
 col1, col2, col3 = st.columns(3)
+
 with col1:
     st.markdown(f"""
     <div class="metric-card">
         <h3>🎯 F1 Score</h3>
         <h2>{metrics['f1_score']:.3f}</h2>
-    </div>""", unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
+
 with col2:
     st.markdown(f"""
     <div class="metric-card">
         <h3>✅ Accuracy</h3>
         <h2>{metrics['accuracy']:.1%}</h2>
-    </div>""", unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
+
 with col3:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>📈 AUC</h3>
+        <h3>📈 ROC AUC</h3>
         <h2>{metrics['roc_auc']:.3f}</h2>
-    </div>""", unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
-# Tabs
-tab1, tab2, tab3 = st.tabs(["🎮 Predict Game", "📊 Analytics", "📈 Data"])
+col4, col5 = st.columns(2)
+st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+    <div class="metric-card">
+        <h3>🎯 Precision</h3>
+        <h2>{metrics['precision']:.3f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col5:
+    st.markdown(f"""
+    <div class="metric-card">
+        <h3>🔎 Recall</h3>
+        <h2>{metrics['recall']:.3f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # =====================================================
-# TAB 1: PREDICTOR
+# TABS
+# =====================================================
+st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
+tab1, tab2, tab3 = st.tabs([
+    "🎮 Game Predictor", 
+    "📊 Model Analytics", 
+    "📈 Data Explorer"
+])
+# =====================================================
+# TAB 1: PREDICTOR 
 # =====================================================
 with tab1:
     st.markdown("---")
+    st.markdown("#### 🔮 **Input Game Data**")
     
     with st.form("predict_form", clear_on_submit=True):
-        # Responsive form
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([1,1])
         with col1:
-            genre = st.selectbox("🎨 Genre", unique_genres)
-            age_rec = st.selectbox("👶 Age Rating", unique_ages)
-            game_age = st.number_input("📅 Game Age (days)", 0, 3650, 300)
+            genre = st.selectbox("🎨 **Genre**", options=unique_genres)
+            age_rec = st.selectbox("👶 **Age Rating**", options=unique_ages)
         with col2:
-            visits = st.number_input("👥 Total Visits", 0.0, 10000000.0, 50000.0)
-            favorites = st.number_input("❤️ Favorites", 0, 1000000, 2500)
-            update_gap = st.number_input("🔄 Update Gap (days)", 0, 365, 30)
+            game_age = st.number_input("📅 **Game Age** (days)", min_value=0, value=300)
+            update_gap = st.number_input("🔄 **Update Gap** (days)", min_value=0, value=30)
         
-        col3, col4 = st.columns(2)
+        col3, col4 = st.columns([1,1])
         with col3:
-            likes = st.number_input("👍 Likes", 0, 1000000, 5000)
+            visits = st.number_input("👥 **Total Visits**", min_value=0.0, value=50000.0)
+            favorites = st.number_input("❤️ **Favorites**", min_value=0, value=2500)
         with col4:
-            dislikes = st.number_input("👎 Dislikes", 0, 100000, 500)
+            likes = st.number_input("👍 **Likes**", min_value=0, value=5000)
+            dislikes = st.number_input("👎 **Dislikes**", min_value=0, value=500)
         
-        submitted = st.form_submit_button("🚀 ANALYZE GAME", use_container_width=True)
+        submitted = st.form_submit_button("🚀 **ANALYZE GAME**", use_container_width=True)
     
     if submitted:
-        with st.spinner("Analyzing..."):
-            # feature engineering
+        with st.spinner("🔬 Analyzing game potential..."):
+            # Feature engineering 
             visit_velocity = np.log1p(visits / max(game_age, 1))
             favorite_rate = np.log1p(favorites / max(visits, 1))
             engagement_rate = np.log1p((likes + dislikes) / max(visits, 1))
@@ -169,133 +284,272 @@ with tab1:
             update_gap_days = np.log1p(update_gap)
 
             input_df = pd.DataFrame({
-                "game_age": [game_age],
-                "update_gap_days": [update_gap_days],
-                "visit_velocity": [visit_velocity],
-                "favorite_rate": [favorite_rate],
-                "engagement_rate": [engagement_rate],
-                "like_ratio": [like_ratio],
-                "Genre": [genre],
-                "AgeRecommendation": [age_rec]
+                "game_age": [game_age], "update_gap_days": [update_gap_days],
+                "visit_velocity": [visit_velocity], "favorite_rate": [favorite_rate],
+                "engagement_rate": [engagement_rate], "like_ratio": [like_ratio],
+                "Genre": [genre], "AgeRecommendation": [age_rec]
             })
 
-            # Predict
-            prediction = final_model.predict(input_df)[0]
-            probability = final_model.predict_proba(input_df)[0, 1]
+            pred = final_model.predict(input_df)[0]
+            prob = final_model.predict_proba(input_df)[:, 1][0]
 
-        # Progress bar
-        st.progress(min(probability, 1.0))
-        
-        # Result
-        if prediction == 1:
+            # =====================================================
+            # GENERATE EXPLANATION
+            # =====================================================
+
+            feature_cols = [
+                "game_age",
+                "update_gap_days",
+                "visit_velocity",
+                "favorite_rate",
+                "engagement_rate",
+                "like_ratio",
+                "Genre",
+                "AgeRecommendation"
+            ]
+
+            explanation_df = explain_prediction(
+                final_model,
+                input_df[feature_cols],
+                feature_cols
+            )
+
+        # Display result
+        if pred == 1:
             st.markdown(f"""
             <div class="success-box">
-                <h2>🎉 SUCCESS PREDICTED!</h2>
-                <h3>Success Probability: <strong>{probability:.1%}</strong></h3>
-                <p>🚀 This game has **viral potential**!</p>
+                <h2>🎉 HIGH SUCCESS POTENTIAL!</h2>
+                <h3 style='color:#2d5a2a; font-size:2rem;'>
+                    <span class="stats-metric">Probability of success: {prob*100:.1f}%</span>
+                </h3>
+                <p>🚀 This game has viral potential on Roblox!</p>
             </div>""", unsafe_allow_html=True)
+
         else:
             st.markdown(f"""
             <div class="error-box">
-                <h2>⚠️ Optimization Needed</h2>
-                <h3>Success Probability: <strong>{probability:.1%}</strong></h3>
-                <p>💡 Improve engagement & marketing</p>
+                <h2>⚠️ Needs Optimization </h2>
+                <h3 style='color:#8b1a1a; font-size:2rem;'>
+                    <span class="stats-metric">Probability of success: {prob*100:.1f}%</span>
+                </h3>
+                <p>💡 Improve marketing & engagement strategies</p>
             </div>""", unsafe_allow_html=True)
 
-        st.markdown("### 🧠 **Why This Prediction?**")
-        
-        engagement_rate = (likes + dislikes) / max(visits, 1)
-        sentiment = likes / max(likes + dislikes, 1)
-        retention = favorites / max(visits, 1)
-        velocity = visits / max(game_age, 1)
-        
-        # Display insights
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("👥 Engagement Rate", f"{engagement_rate:.1%}")
-            st.metric("❤️ Retention Rate", f"{retention:.2%}")
-        with col2:
-            st.metric("👍 Sentiment", f"{sentiment:.1%}")
-            st.metric("📈 Daily Velocity", f"{velocity:.0f}/day")
-        
-        st.markdown("---")
-        st.markdown("""
-        **🟢 Excellent** (>80%) | **🟡 Good** (50-80%) | **🔴 Needs Work** (<50%)
-        """)
+        st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
+        st.markdown("### 🧠 Model Reasoning")
+
+        colA, colB = st.columns(2)
+
+        with colA:
+            st.metric(
+                "Baseline Success Rate",
+                f"{baseline_prob*100:.1f}%"
+            )
+
+        with colB:
+            st.metric(
+                "Predicted Success Rate",
+                f"{prob*100:.1f}%",
+                delta=f"{(prob-baseline_prob)*100:.1f}%"
+            )
+
+        st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
+        st.markdown(
+        """
+        Baseline adalah peluang sukses rata-rata game dalam dataset sebelum model melihat fitur game tertentu.
+        """
+        )
+
+        # =====================================================
+        # EXPLANATION
+        # =====================================================
+
+        if explanation_df is not None:
+            st.markdown("### 🔎 AI Explanation")
+            st.markdown(
+            """
+            Model menjelaskan fitur mana yang paling mempengaruhi prediksi.
+            (+): meningkatkan peluang sukses  
+            (-): menurunkan peluang sukses
+            """
+            )
+
+            for _, row in explanation_df.iterrows():
+                sign = "+" if row["contribution"] >= 0 else "-"
+                st.markdown(
+                    f"**{row['feature']}** → `{sign}{abs(row['contribution']):.3f}`"
+                )
 
 # =====================================================
-# TAB 2: ANALYTICS
+# TAB 2: ANALYTICS 
 # =====================================================
 with tab2:
-    # Target distribution
-    st.subheader("📊 Dataset Distribution")
-    fig, ax = plt.subplots(figsize=(8, 5))
-    labels = ['Not Success', 'Success']
-    sizes = [len(y_test[y_test==0]), len(y_test[y_test==1])]
-    colors = ['#ff9999', '#66b3ff']
-    wedges, texts, autotexts = ax.pie(sizes, labels=labels, colors=colors, 
-                                        autopct='%1.1f%%', startangle=90)
-    ax.set_title('Success Rate in Dataset', fontsize=16, fontweight='bold')
-    st.pyplot(fig)
+    st.markdown("---")
+    
+    # Target Distribution
+    st.subheader("📊 **Target Distribution**")
+    col_img, col_desc = st.columns([1, 2])
+    with col_img:
+        fig, ax = plt.subplots(figsize=(5, 3))
+        target_counts = pd.Series(y_test).value_counts().sort_index()
+        colors = ['#ff9999', '#66b3ff']
+        bars = ax.bar(target_counts.index, target_counts.values, 
+                        color=colors, alpha=0.8, edgecolor='white', linewidth=2)
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(['Not Success', 'Success'], fontweight='bold')
+        ax.set_ylabel('Count', fontweight='bold')
+        ax.set_title('Game Success Distribution', fontsize=12, fontweight='bold', pad=10)
+        ax.grid(axis='y', alpha=0.3)
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height + 20,
+                    f'{int(height)}', ha='center', va='bottom', fontweight='bold', fontsize=9)
+        plt.tight_layout()
+        st.pyplot(fig)
+
+    with col_desc:
+        st.markdown("""
+        <div style='font-size:1.1rem;'>
+        <b>Distribusi Target</b> menunjukkan jumlah game Roblox yang sukses dan tidak sukses dalam dataset.<br>
+        <ul>
+            <li><b>Success:</b> Game yang memenuhi kriteria sukses</li>
+            <li><b>Not Success:</b> Game yang belum memenuhi kriteria sukses</li>
+        </ul>
+        Analisis distribusi ini membantu memahami proporsi target sebelum model dilatih.
+        </div>
+        """, unsafe_allow_html=True)
     
     # Confusion Matrix
-    st.subheader("🔍 Confusion Matrix")
-    col1, col2 = st.columns(2)
-    with col1:
-        fig, ax = plt.subplots(figsize=(6, 5))
+    st.subheader("🔍 **Confusion Matrix**")
+    col_img, col_desc = st.columns([1, 2])
+    with col_img:
+        fig, ax = plt.subplots(figsize=(7, 5))
         cm = confusion_matrix(y_test, y_pred)
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
                     xticklabels=['Not Success', 'Success'],
-                    yticklabels=['Actual Not', 'Actual Yes'], ax=ax)
-        ax.set_title('Prediction Results')
+                    yticklabels=['Actual Not', 'Actual Yes'],
+                    ax=ax, cbar_kws={'label': 'Count'})
+        ax.set_title('Confusion Matrix', fontweight='bold', pad=20)
         st.pyplot(fig)
-    
-    # Simple ROC
-    with col2:
-        st.subheader("📈 Model Strength")
-        st.metric("F1 Score", f"{metrics['f1_score']:.3f}")
-        st.metric("Precision", f"{metrics.get('precision', 0):.3f}")
-        st.metric("Recall", f"{metrics.get('recall', 0):.3f}")
+    with col_desc:
+        st.markdown("""
+        <div style='font-size:1.1rem;'>
+        <b>Confusion Matrix</b> menunjukkan jumlah prediksi benar dan salah dari model.<br>
+        <ul>
+            <li><b>True Positive:</b> Game sukses yang diprediksi sukses</li>
+            <li><b>True Negative:</b> Game tidak sukses yang diprediksi tidak sukses</li>
+            <li><b>False Positive:</b> Game tidak sukses yang diprediksi sukses</li>
+            <li><b>False Negative:</b> Game sukses yang diprediksi tidak sukses</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ROC Curve
+    st.subheader("📈 **ROC Curve**")
+    col_img, col_desc = st.columns([1, 2])
+    with col_img:
+        fig, ax = plt.subplots(figsize=(7, 5))
+        fpr, tpr = roc_data["fpr"], roc_data["tpr"]
+        ax.plot(fpr, tpr, color='#1f77b4', lw=3, 
+                label=f'ROC Curve (AUC = {metrics["roc_auc"]:.3f})')
+        ax.plot([0,1], [0,1], color='gray', lw=2, linestyle='--', alpha=0.6)
+        ax.set_xlabel('False Positive Rate', fontweight='bold')
+        ax.set_ylabel('True Positive Rate', fontweight='bold')
+        ax.legend(fontsize=11); ax.grid(True, alpha=0.3)
+        ax.set_title('ROC Curve Analysis', fontweight='bold', pad=20)
+        st.pyplot(fig)
+    with col_desc:
+        st.markdown("""
+        <div style='font-size:1.1rem;'>
+        <b>ROC Curve</b> menggambarkan kemampuan model membedakan antara game sukses dan tidak sukses.<br>
+        <ul>
+            <li><b>AUC (Area Under Curve):</b> Semakin mendekati 1, semakin baik model</li>
+            <li>Garis diagonal menunjukkan prediksi acak</li>
+            <li>Kurva di atas diagonal menunjukkan model lebih baik dari acak</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
 # =====================================================
 # TAB 3: DATA EXPLORER
 # =====================================================
 with tab3:
-    st.subheader("📈 Dataset Overview")
+    st.markdown("---")
     
-    # Quick stats
+    # Dataset Cards
     col1, col2, col3 = st.columns(3)
-    with col1: st.metric("Total Games", f"{len(df):,}")
-    with col2: st.metric("Features", df.shape[1])
-    with col3: st.metric("Genres", df['Genre'].nunique())
+    with col1: st.metric("📊 Total Samples", f"{len(df):,}")
+    with col2: st.metric("🔧 Features", df.shape[1])
+    with col3: st.metric("🎨 Unique Genres", df["Genre"].nunique())
     
-    # Genre distribution
-    st.subheader("🎨 Top Genres")
-    genre_counts = df['Genre'].value_counts().head(10)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bars = ax.barh(genre_counts.index, genre_counts.values, color='skyblue', alpha=0.8)
-    ax.set_xlabel('Number of Games')
-    ax.set_title('Most Common Game Genres')
-    for i, bar in enumerate(bars):
-        width = bar.get_width()
-        ax.text(width + 50, bar.get_y() + bar.get_height()/2, 
-                f'{int(width)}', va='center')
-    st.pyplot(fig)
+    st.markdown("---")
     
-    # Dataset preview
-    st.subheader("📋 Sample Data")
-    st.dataframe(df.head(), use_container_width=True)
+    # Top Genres 
+    st.subheader("🎨 **Top 10 Genres**")
+    st.markdown("""
+    <div style='font-size:1.1rem;'>
+    <b>Feature Importance</b> menunjukkan fitur mana yang paling berpengaruh terhadap prediksi kesuksesan game Roblox.<br>
+    Fitur dengan skor tertinggi memiliki kontribusi terbesar dalam model Random Forest.<br>
+    Gunakan insight ini untuk mengoptimalkan aspek-aspek game yang penting!
+    </div>
+    """, unsafe_allow_html=True) 
+    genre_df = (df["Genre"].value_counts()
+                .head(10)
+                .reset_index()
+                .rename(columns={'count': 'Total Games'}))
+    st.dataframe(genre_df.style.background_gradient(cmap='viridis'), 
+                use_container_width=True, height=300)
     
-    # Feature importance 
-    if not df_imp.empty:
-        st.subheader("🏆 Top Features")
-        top_features = df_imp.head(10)
-        st.bar_chart(top_features.set_index('Fitur')['Importance'])
+    # Dataset Statistics 
+    st.subheader("📈 **Dataset Statistics**")
+    st.markdown("""
+    <div style='font-size:1.1rem;'>
+    <b>Feature Importance</b> menunjukkan fitur mana yang paling berpengaruh terhadap prediksi kesuksesan game Roblox.<br>
+    Fitur dengan skor tertinggi memiliki kontribusi terbesar dalam model Random Forest.<br>
+    Gunakan insight ini untuk mengoptimalkan aspek-aspek game yang penting!
+    </div>
+    """, unsafe_allow_html=True) 
+    
+    try:
+        desc = df.describe(include='all').T.round(2)
+        st.dataframe(desc, use_container_width=True, height=400)
+    except Exception as e:
+        st.warning("📊 Dataset summary temporarily unavailable")
+    
+    # Feature Importance 
+    if df_imp is not None and len(df_imp) > 0:
+        st.subheader("🏆 **Top 10 Feature Importance**")
+        top_imp = df_imp.nlargest(10, 'Importance')[['Fitur', 'Importance']]
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            fig, ax = plt.subplots(figsize=(7, 5))
+            top10 = top_imp.sort_values('Importance')
+            colors = plt.cm.plasma(np.linspace(0, 1, len(top10)))
+            bars = ax.barh(range(len(top10)), top10['Importance'], color=colors, alpha=0.8)
+            ax.set_yticks(range(len(top10)))
+            ax.set_yticklabels([str(f)[:25] + '...' if len(str(f)) > 25 else str(f) 
+                    for f in top10['Fitur']], fontsize=9)
+            ax.set_xlabel('Importance Score', fontweight='bold')
+            ax.set_title('Feature Importance', fontsize=12, fontweight='bold', pad=10)
+            ax.grid(axis='x', alpha=0.3)
+            for i, bar in enumerate(bars):
+                width = bar.get_width()
+                ax.text(width + 0.0005, i, f'{width:.4f}', va='center', fontweight='bold', fontsize=9)
+            plt.tight_layout()
+            st.pyplot(fig)
+        with col2:
+            st.markdown("""
+            <div style='font-size:1.1rem;'>
+            <b>Feature Importance</b> menunjukkan fitur mana yang paling berpengaruh terhadap prediksi kesuksesan game Roblox.<br>
+            Fitur dengan skor tertinggi memiliki kontribusi terbesar dalam model Random Forest.<br>
+            Gunakan insight ini untuk mengoptimalkan aspek-aspek game yang penting!
+            </div>
+            """, unsafe_allow_html=True)
+            top10 = top_imp.sort_values('Importance')
 
-# Footer
+
+        top_imp['Importance'] = top_imp['Importance'].round(4)
+        st.dataframe(top_imp.style.background_gradient(cmap='plasma'), 
+                    use_container_width=True)
+
 st.markdown("---")
-st.markdown("""
-<div style='text-align:center; color:#888; padding:2rem;'>
-    🎓 Machine Learning Project | Random Forest Model
-</div>
-""", unsafe_allow_html=True)
