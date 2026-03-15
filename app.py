@@ -33,7 +33,6 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
     text-align: center;
     margin: 1rem 0 2rem 0 !important;
-    text-shadow: 0 4px 8px rgba(0,0,0,0.1);x
 }
 
 /* Metric Cards */
