@@ -34,7 +34,7 @@ st.markdown("""
     text-align: center;
     margin: 1rem 0 2rem 0 !important;
     text-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    color: white;
+    color: white !important;
 }
 
 /* Metric Cards */
@@ -174,10 +174,19 @@ with col3:
 # =====================================================
 st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
 tab1, tab2, tab3 = st.tabs([
-    "<span style='font-size:1.5rem;'>🎮 <b>Game Predictor</b></span>", 
-    "<span style='font-size:1.5rem;'>📊 <b>Model Analytics</b></span>", 
-    "<span style='font-size:1.5rem;'>📈 <b>Data Explorer</b></span>"
+    "🎮 Game Predictor", 
+    "📊 Model Analytics", 
+    "📈 Data Explorer"
 ])
+
+st.markdown("""
+<style>
+.stTabs [data-baseweb="tab"] > div {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # =====================================================
 # TAB 1: PREDICTOR 
@@ -258,7 +267,7 @@ with tab2:
     st.subheader("📊 **Target Distribution**")
     col_img, col_desc = st.columns([2, 1])
     with col_img:
-        fig, ax = plt.subplots(figsize=(3, 1.5))
+        fig, ax = plt.subplots(figsize=(5, 3))
         target_counts = pd.Series(y_test).value_counts().sort_index()
         colors = ['#ff9999', '#66b3ff']
         bars = ax.bar(target_counts.index, target_counts.values, 
@@ -273,7 +282,8 @@ with tab2:
             ax.text(bar.get_x() + bar.get_width()/2., height + 20,
                     f'{int(height)}', ha='center', va='bottom', fontweight='bold', fontsize=9)
         plt.tight_layout()
-        st.pyplot(fig)
+        with st.container():
+            st.pyplot(fig, use_container_width=True, height=180)
     with col_desc:
         st.markdown("""
         <div style='font-size:1.1rem;'>
@@ -290,7 +300,7 @@ with tab2:
     st.subheader("🔍 **Confusion Matrix**")
     col_img, col_desc = st.columns([2, 1])
     with col_img:
-        fig, ax = plt.subplots(figsize=(3, 1.5))
+        fig, ax = plt.subplots(figsize=(7, 5))
         cm = confusion_matrix(y_test, y_pred)
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
                     xticklabels=['Not Success', 'Success'],
@@ -315,7 +325,7 @@ with tab2:
     st.subheader("📈 **ROC Curve**")
     col_img, col_desc = st.columns([2, 1])
     with col_img:
-        fig, ax = plt.subplots(figsize=(3, 1.5))
+        fig, ax = plt.subplots(figsize=(7, 5))
         fpr, tpr = roc_data["fpr"], roc_data["tpr"]
         ax.plot(fpr, tpr, color='#1f77b4', lw=3, 
                 label=f'ROC Curve (AUC = {metrics["roc_auc"]:.3f})')
@@ -389,7 +399,7 @@ with tab3:
         top_imp = df_imp.nlargest(10, 'Importance')[['Fitur', 'Importance']]
         col1, col2 = st.columns([1, 2])
         with col1:
-            fig, ax = plt.subplots(figsize=(5, 3))
+            fig, ax = plt.subplots(figsize=(7, 5))
             top10 = top_imp.sort_values('Importance')
             colors = plt.cm.plasma(np.linspace(0, 1, len(top10)))
             bars = ax.barh(range(len(top10)), top10['Importance'], color=colors, alpha=0.8)
