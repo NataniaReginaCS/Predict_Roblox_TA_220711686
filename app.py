@@ -251,7 +251,7 @@ with tab2:
     
     # Target Distribution
     st.subheader("📊 **Target Distribution**")
-    col_img, col_desc = st.columns([2, 1])
+    col_img, col_desc = st.columns([1, 2])
     with col_img:
         fig, ax = plt.subplots(figsize=(5, 3))
         target_counts = pd.Series(y_test).value_counts().sort_index()
@@ -284,7 +284,7 @@ with tab2:
     
     # Confusion Matrix
     st.subheader("🔍 **Confusion Matrix**")
-    col_img, col_desc = st.columns([2, 1])
+    col_img, col_desc = st.columns([1, 2])
     with col_img:
         fig, ax = plt.subplots(figsize=(7, 5))
         cm = confusion_matrix(y_test, y_pred)
@@ -309,7 +309,7 @@ with tab2:
 
     # ROC Curve
     st.subheader("📈 **ROC Curve**")
-    col_img, col_desc = st.columns([2, 1])
+    col_img, col_desc = st.columns([1, 2])
     with col_img:
         fig, ax = plt.subplots(figsize=(7, 5))
         fpr, tpr = roc_data["fpr"], roc_data["tpr"]
