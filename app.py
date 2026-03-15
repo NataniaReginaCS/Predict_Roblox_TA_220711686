@@ -28,27 +28,32 @@ st.markdown("""
 .main-header {
     font-size: clamp(2rem, 5vw, 3rem) !important;
     font-weight: 800 !important;
-    background: linear-gradient(135deg, #1f77b4 0%, #4a90e2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     text-align: center;
     margin: 1rem 0 2rem 0 !important;
-    color: black !important;
+    color: #1f77b4 !important;
 }
 
 /* Metric Cards */
 .metric-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 0.5rem;
-    border-radius: 16px;
-    color: white;
-    text-align: center;
-    box-shadow: 0 10px 40px rgba(102,126,234,0.3);
-    transition: transform 0.3s ease;
-    border: 1px solid rgba(255,255,255,0.2);
+    background: linear-gradient(135deg,#ffffff,#f8f9fa);
+    border-radius:12px;
+    padding:18px;
+    text-align:center;
+    box-shadow:0px 3px 8px rgba(0,0,0,0.08);
+    border:1px solid #e6e6e6;
 }
-.metric-card:hover {
-    transform: translateY(-5px);
+
+.metric-card h4{
+    margin:0;
+    font-size:0.9rem;
+    color:#555;
+}
+
+.metric-card h2{
+    margin-top:8px;
+    font-size:1.8rem;
+    font-weight:700;
+    color:#1f77b4;
 }
 
 /* Result Boxes */
@@ -129,7 +134,39 @@ def load_model_and_artifacts():
         st.stop()
 
 final_model, df, X_test, y_test, y_pred, y_prob, metrics, roc_data, df_imp = load_model_and_artifacts()
+baseline_prob = float(np.mean(y_test))
 
+# Explanation
+def explain_prediction(model, input_df, feature_cols):
+    try:
+        importances = model.feature_importances_
+
+        contributions = []
+
+        for i, f in enumerate(feature_cols):
+
+            value = input_df.iloc[0][f]
+
+            contrib = value * importances[i]
+
+            contributions.append({
+                "feature": f,
+                "contribution": contrib
+            })
+
+        exp_df = pd.DataFrame(contributions)
+
+        exp_df["abs"] = exp_df["contribution"].abs()
+
+        exp_df = exp_df.sort_values("abs", ascending=False)
+
+        exp_df = exp_df.drop(columns="abs")
+
+        return exp_df.head(5)
+
+    except:
+        return None
+    
 # Data prep
 unique_genres = sorted(df.get("Genre", pd.Series()).dropna().unique().tolist())
 unique_ages = sorted(df.get("AgeRecommendation", pd.Series()).dropna().unique().tolist())
@@ -149,24 +186,49 @@ st.markdown(f"""
 # =====================================================
 st.markdown("### 📊 **Model Performance Overview**")
 col1, col2, col3 = st.columns(3)
+
 with col1:
     st.markdown(f"""
     <div class="metric-card">
-        <h4>🎯 F1-Score</h4>
-        <h2 style='font-size:1rem; font-weight:500;'>{metrics['f1_score']:.3f}</h2>
-    </div>""", unsafe_allow_html=True)
+        <h4>🎯 F1 Score</h4>
+        <h2>{metrics['f1_score']:.3f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
 with col2:
     st.markdown(f"""
     <div class="metric-card">
         <h4>✅ Accuracy</h4>
-        <h2 style='font-size:1rem; font-weight:500;'>{metrics['accuracy']:.1%}</h2>
-    </div>""", unsafe_allow_html=True)
+        <h2>{metrics['accuracy']:.1%}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
 with col3:
     st.markdown(f"""
     <div class="metric-card">
-        <h4>📈 ROC-AUC</h4>
-        <h2 style='font-size:1rem; font-weight:500; '>{metrics['roc_auc']:.3f}</h2>
-    </div>""", unsafe_allow_html=True)
+        <h4>📈 ROC AUC</h4>
+        <h2>{metrics['roc_auc']:.3f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+col4, col5 = st.columns(2)
+
+with col4:
+    st.markdown(f"""
+    <div class="metric-card">
+        <h4>🎯 Precision</h4>
+        <h2>{metrics['precision']:.3f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col5:
+    st.markdown(f"""
+    <div class="metric-card">
+        <h4>🔎 Recall</h4>
+        <h2>{metrics['recall']:.3f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # =====================================================
 # TABS
@@ -222,7 +284,24 @@ with tab1:
             pred = final_model.predict(input_df)[0]
             prob = final_model.predict_proba(input_df)[:, 1][0]
 
-        
+            # =====================================================
+            # GENERATE EXPLANATION
+            # =====================================================
+
+            feature_cols = [
+                "game_age",
+                "update_gap_days",
+                "visit_velocity",
+                "favorite_rate",
+                "engagement_rate",
+                "like_ratio"
+            ]
+
+            explanation_df = explain_prediction(
+                final_model,
+                input_df[feature_cols],
+                feature_cols
+            )
         # Display result
         if pred == 1:
             st.markdown(f"""
@@ -233,6 +312,7 @@ with tab1:
                 </h3>
                 <p>🚀 This game has viral potential on Roblox!</p>
             </div>""", unsafe_allow_html=True)
+
         else:
             st.markdown(f"""
             <div class="error-box">
@@ -242,6 +322,49 @@ with tab1:
                 </h3>
                 <p>💡 Improve marketing & engagement strategies</p>
             </div>""", unsafe_allow_html=True)
+
+        st.markdown("### 🧠 Model Reasoning")
+
+        colA, colB = st.columns(2)
+
+        with colA:
+            st.metric(
+                "Baseline Success Rate",
+                f"{baseline_prob*100:.1f}%"
+            )
+
+        with colB:
+            st.metric(
+                "Predicted Success Rate",
+                f"{prob*100:.1f}%",
+                delta=f"{(prob-baseline_prob)*100:.1f}%"
+            )
+
+        st.markdown(
+        """
+        Baseline adalah peluang sukses rata-rata game dalam dataset sebelum model melihat fitur game tertentu.
+        """
+        )
+
+        # =====================================================
+        # EXPLANATION
+        # =====================================================
+
+        if explanation_df is not None:
+            st.markdown("### 🔎 AI Explanation")
+            st.markdown(
+            """
+            Model menjelaskan fitur mana yang paling mempengaruhi prediksi.
+            (+): meningkatkan peluang sukses  
+            (-): menurunkan peluang sukses
+            """
+            )
+
+            for _, row in explanation_df.iterrows():
+                sign = "+" if row["contribution"] >= 0 else "-"
+                st.markdown(
+                    f"**{row['feature']}** → `{sign}{abs(row['contribution']):.3f}`"
+                )
 
 # =====================================================
 # TAB 2: ANALYTICS 
@@ -359,7 +482,7 @@ with tab3:
     genre_df = (df["Genre"].value_counts()
                 .head(10)
                 .reset_index()
-                .rename(columns={'index': 'Genre', 'Genre': 'Count'}))
+                .rename(columns={'count': 'Total Games'}))
     st.dataframe(genre_df.style.background_gradient(cmap='viridis'), 
                 use_container_width=True, height=300)
     
