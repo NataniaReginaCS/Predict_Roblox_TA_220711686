@@ -258,7 +258,7 @@ with tab2:
     st.subheader("📊 **Target Distribution**")
     col_img, col_desc = st.columns([2, 1])
     with col_img:
-        fig, ax = plt.subplots(figsize=(5, 3))
+        fig, ax = plt.subplots(figsize=(3, 1.5))
         target_counts = pd.Series(y_test).value_counts().sort_index()
         colors = ['#ff9999', '#66b3ff']
         bars = ax.bar(target_counts.index, target_counts.values, 
@@ -290,7 +290,7 @@ with tab2:
     st.subheader("🔍 **Confusion Matrix**")
     col_img, col_desc = st.columns([2, 1])
     with col_img:
-        fig, ax = plt.subplots(figsize=(7, 5))
+        fig, ax = plt.subplots(figsize=(3, 1.5))
         cm = confusion_matrix(y_test, y_pred)
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
                     xticklabels=['Not Success', 'Success'],
@@ -315,7 +315,7 @@ with tab2:
     st.subheader("📈 **ROC Curve**")
     col_img, col_desc = st.columns([2, 1])
     with col_img:
-        fig, ax = plt.subplots(figsize=(7, 5))
+        fig, ax = plt.subplots(figsize=(3, 1.5))
         fpr, tpr = roc_data["fpr"], roc_data["tpr"]
         ax.plot(fpr, tpr, color='#1f77b4', lw=3, 
                 label=f'ROC Curve (AUC = {metrics["roc_auc"]:.3f})')
