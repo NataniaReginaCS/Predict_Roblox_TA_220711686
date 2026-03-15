@@ -43,14 +43,13 @@ st.markdown("""
     border:1px solid #e6e6e6;
 }
 
-.metric-card h4{
+.metric-card h3{
     margin:0;
     font-size:0.9rem;
     color:#555;
 }
 
 .metric-card h2{
-    margin-top:8px;
     font-size:1.8rem;
     font-weight:700;
     color:#1f77b4;
@@ -155,13 +154,9 @@ def explain_prediction(model, input_df, feature_cols):
             })
 
         exp_df = pd.DataFrame(contributions)
-
         exp_df["abs"] = exp_df["contribution"].abs()
-
         exp_df = exp_df.sort_values("abs", ascending=False)
-
         exp_df = exp_df.drop(columns="abs")
-
         return exp_df.head(5)
 
     except:
@@ -190,7 +185,7 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown(f"""
     <div class="metric-card">
-        <h4>🎯 F1 Score</h4>
+        <h3>🎯 F1 Score</h3>
         <h2>{metrics['f1_score']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -198,7 +193,7 @@ with col1:
 with col2:
     st.markdown(f"""
     <div class="metric-card">
-        <h4>✅ Accuracy</h4>
+        <h3>✅ Accuracy</h3>
         <h2>{metrics['accuracy']:.1%}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -206,17 +201,18 @@ with col2:
 with col3:
     st.markdown(f"""
     <div class="metric-card">
-        <h4>📈 ROC AUC</h4>
+        <h3>📈 ROC AUC</h3>
         <h2>{metrics['roc_auc']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
 
 col4, col5 = st.columns(2)
+st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
 
 with col4:
     st.markdown(f"""
     <div class="metric-card">
-        <h4>🎯 Precision</h4>
+        <h3>🎯 Precision</h3>
         <h2>{metrics['precision']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -224,7 +220,7 @@ with col4:
 with col5:
     st.markdown(f"""
     <div class="metric-card">
-        <h4>🔎 Recall</h4>
+        <h3>🔎 Recall</h3>
         <h2>{metrics['recall']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -294,7 +290,9 @@ with tab1:
                 "visit_velocity",
                 "favorite_rate",
                 "engagement_rate",
-                "like_ratio"
+                "like_ratio",
+                "Genre",
+                "AgeRecommendation"
             ]
 
             explanation_df = explain_prediction(
@@ -302,6 +300,7 @@ with tab1:
                 input_df[feature_cols],
                 feature_cols
             )
+
         # Display result
         if pred == 1:
             st.markdown(f"""
@@ -323,6 +322,7 @@ with tab1:
                 <p>💡 Improve marketing & engagement strategies</p>
             </div>""", unsafe_allow_html=True)
 
+        st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
         st.markdown("### 🧠 Model Reasoning")
 
         colA, colB = st.columns(2)
@@ -340,6 +340,7 @@ with tab1:
                 delta=f"{(prob-baseline_prob)*100:.1f}%"
             )
 
+        st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
         st.markdown(
         """
         Baseline adalah peluang sukses rata-rata game dalam dataset sebelum model melihat fitur game tertentu.
