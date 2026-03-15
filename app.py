@@ -34,6 +34,7 @@ st.markdown("""
     text-align: center;
     margin: 1rem 0 2rem 0 !important;
     text-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    color: white;
 }
 
 /* Metric Cards */
@@ -141,7 +142,6 @@ st.markdown('<h1 class="main-header">🚀 Roblox Game Success Predictor</h1>', u
 st.markdown(f"""
 <div style='text-align:center; color:#666; font-size:1.2rem; margin-bottom:2rem;'>
     Prediksi kesuksesan game Roblox menggunakan <strong>Random Forest</strong><br>
-    <span style='color:#1f77b4; font-size:1.5rem;'>F1-Score: {metrics['f1_score']:.3f} | Accuracy: {metrics['accuracy']:.1%}</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -166,13 +166,18 @@ with col3:
     st.markdown(f"""
     <div class="metric-card">
         <h3>📈 ROC-AUC</h3>
-        <h2 style='font-size:2.5rem; font-weight:900;'>{metrics['roc_auc']:.3f}</h2>
+        <h2 style='font-size:2.5rem; font-weight:900; '>{metrics['roc_auc']:.3f}</h2>
     </div>""", unsafe_allow_html=True)
 
 # =====================================================
 # TABS
 # =====================================================
-tab1, tab2, tab3 = st.tabs(["🎮 **Game Predictor**", "📊 **Model Analytics**", "📈 **Data Explorer**"])
+st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
+tab1, tab2, tab3 = st.tabs([
+    "<span style='font-size:1.5rem;'>🎮 <b>Game Predictor</b></span>", 
+    "<span style='font-size:1.5rem;'>📊 <b>Model Analytics</b></span>", 
+    "<span style='font-size:1.5rem;'>📈 <b>Data Explorer</b></span>"
+])
 
 # =====================================================
 # TAB 1: PREDICTOR 
@@ -251,30 +256,40 @@ with tab2:
     
     # Target Distribution
     st.subheader("📊 **Target Distribution**")
-    fig, ax = plt.subplots(figsize=(8, 5))
-    target_counts = pd.Series(y_test).value_counts().sort_index()
-    colors = ['#ff9999', '#66b3ff']
-    bars = ax.bar(target_counts.index, target_counts.values, 
-                    color=colors, alpha=0.8, edgecolor='white', linewidth=2)
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(['Not Success', 'Success'], fontweight='bold')
-    ax.set_ylabel('Count', fontweight='bold')
-    ax.set_title('Game Success Distribution', fontsize=16, fontweight='bold', pad=20)
-    ax.grid(axis='y', alpha=0.3)
+    col_img, col_desc = st.columns([2, 1])
+    with col_img:
+        fig, ax = plt.subplots(figsize=(5, 3))
+        target_counts = pd.Series(y_test).value_counts().sort_index()
+        colors = ['#ff9999', '#66b3ff']
+        bars = ax.bar(target_counts.index, target_counts.values, 
+                        color=colors, alpha=0.8, edgecolor='white', linewidth=2)
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(['Not Success', 'Success'], fontweight='bold')
+        ax.set_ylabel('Count', fontweight='bold')
+        ax.set_title('Game Success Distribution', fontsize=12, fontweight='bold', pad=10)
+        ax.grid(axis='y', alpha=0.3)
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height + 20,
+                    f'{int(height)}', ha='center', va='bottom', fontweight='bold', fontsize=9)
+        plt.tight_layout()
+        st.pyplot(fig)
+    with col_desc:
+        st.markdown("""
+        <div style='font-size:1.1rem;'>
+        <b>Distribusi Target</b> menunjukkan jumlah game Roblox yang sukses dan tidak sukses dalam dataset.<br>
+        <ul>
+            <li><b>Success:</b> Game yang memenuhi kriteria sukses</li>
+            <li><b>Not Success:</b> Game yang belum memenuhi kriteria sukses</li>
+        </ul>
+        Analisis distribusi ini membantu memahami proporsi target sebelum model dilatih.
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Add labels
-    for bar in bars:
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height + 50,
-                f'{int(height)}', ha='center', va='bottom', fontweight='bold')
-    
-    plt.tight_layout()
-    st.pyplot(fig)
-    
-    # Confusion Matrix + ROC 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("🔍 **Confusion Matrix**")
+    # Confusion Matrix
+    st.subheader("🔍 **Confusion Matrix**")
+    col_img, col_desc = st.columns([2, 1])
+    with col_img:
         fig, ax = plt.subplots(figsize=(7, 5))
         cm = confusion_matrix(y_test, y_pred)
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
@@ -283,9 +298,23 @@ with tab2:
                     ax=ax, cbar_kws={'label': 'Count'})
         ax.set_title('Confusion Matrix', fontweight='bold', pad=20)
         st.pyplot(fig)
-    
-    with col2:
-        st.subheader("📈 **ROC Curve**")
+    with col_desc:
+        st.markdown("""
+        <div style='font-size:1.1rem;'>
+        <b>Confusion Matrix</b> menunjukkan jumlah prediksi benar dan salah dari model.<br>
+        <ul>
+            <li><b>True Positive:</b> Game sukses yang diprediksi sukses</li>
+            <li><b>True Negative:</b> Game tidak sukses yang diprediksi tidak sukses</li>
+            <li><b>False Positive:</b> Game tidak sukses yang diprediksi sukses</li>
+            <li><b>False Negative:</b> Game sukses yang diprediksi tidak sukses</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ROC Curve
+    st.subheader("📈 **ROC Curve**")
+    col_img, col_desc = st.columns([2, 1])
+    with col_img:
         fig, ax = plt.subplots(figsize=(7, 5))
         fpr, tpr = roc_data["fpr"], roc_data["tpr"]
         ax.plot(fpr, tpr, color='#1f77b4', lw=3, 
@@ -296,6 +325,17 @@ with tab2:
         ax.legend(fontsize=11); ax.grid(True, alpha=0.3)
         ax.set_title('ROC Curve Analysis', fontweight='bold', pad=20)
         st.pyplot(fig)
+    with col_desc:
+        st.markdown("""
+        <div style='font-size:1.1rem;'>
+        <b>ROC Curve</b> menggambarkan kemampuan model membedakan antara game sukses dan tidak sukses.<br>
+        <ul>
+            <li><b>AUC (Area Under Curve):</b> Semakin mendekati 1, semakin baik model</li>
+            <li>Garis diagonal menunjukkan prediksi acak</li>
+            <li>Kurva di atas diagonal menunjukkan model lebih baik dari acak</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
 # =====================================================
 # TAB 3: DATA EXPLORER
@@ -313,6 +353,13 @@ with tab3:
     
     # Top Genres 
     st.subheader("🎨 **Top 10 Genres**")
+    st.markdown("""
+    <div style='font-size:1.1rem;'>
+    <b>Feature Importance</b> menunjukkan fitur mana yang paling berpengaruh terhadap prediksi kesuksesan game Roblox.<br>
+    Fitur dengan skor tertinggi memiliki kontribusi terbesar dalam model Random Forest.<br>
+    Gunakan insight ini untuk mengoptimalkan aspek-aspek game yang penting!
+    </div>
+    """, unsafe_allow_html=True) 
     genre_df = (df["Genre"].value_counts()
                 .head(10)
                 .reset_index()
@@ -322,6 +369,14 @@ with tab3:
     
     # Dataset Statistics 
     st.subheader("📈 **Dataset Statistics**")
+    st.markdown("""
+    <div style='font-size:1.1rem;'>
+    <b>Feature Importance</b> menunjukkan fitur mana yang paling berpengaruh terhadap prediksi kesuksesan game Roblox.<br>
+    Fitur dengan skor tertinggi memiliki kontribusi terbesar dalam model Random Forest.<br>
+    Gunakan insight ini untuk mengoptimalkan aspek-aspek game yang penting!
+    </div>
+    """, unsafe_allow_html=True) 
+    
     try:
         desc = df.describe(include='all').T.round(2)
         st.dataframe(desc, use_container_width=True, height=400)
@@ -332,35 +387,36 @@ with tab3:
     if df_imp is not None and len(df_imp) > 0:
         st.subheader("🏆 **Top 10 Feature Importance**")
         top_imp = df_imp.nlargest(10, 'Importance')[['Fitur', 'Importance']]
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            fig, ax = plt.subplots(figsize=(5, 3))
+            top10 = top_imp.sort_values('Importance')
+            colors = plt.cm.plasma(np.linspace(0, 1, len(top10)))
+            bars = ax.barh(range(len(top10)), top10['Importance'], color=colors, alpha=0.8)
+            ax.set_yticks(range(len(top10)))
+            ax.set_yticklabels([str(f)[:25] + '...' if len(str(f)) > 25 else str(f) 
+                    for f in top10['Fitur']], fontsize=9)
+            ax.set_xlabel('Importance Score', fontweight='bold')
+            ax.set_title('Feature Importance', fontsize=12, fontweight='bold', pad=10)
+            ax.grid(axis='x', alpha=0.3)
+            for i, bar in enumerate(bars):
+                width = bar.get_width()
+                ax.text(width + 0.0005, i, f'{width:.4f}', va='center', fontweight='bold', fontsize=9)
+            plt.tight_layout()
+            st.pyplot(fig)
+        with col2:
+            st.markdown("""
+            <div style='font-size:1.1rem;'>
+            <b>Feature Importance</b> menunjukkan fitur mana yang paling berpengaruh terhadap prediksi kesuksesan game Roblox.<br>
+            Fitur dengan skor tertinggi memiliki kontribusi terbesar dalam model Random Forest.<br>
+            Gunakan insight ini untuk mengoptimalkan aspek-aspek game yang penting!
+            </div>
+            """, unsafe_allow_html=True)
+            top10 = top_imp.sort_values('Importance')
+
+
         top_imp['Importance'] = top_imp['Importance'].round(4)
         st.dataframe(top_imp.style.background_gradient(cmap='plasma'), 
                     use_container_width=True)
-        
-        # Bar chart
-        fig, ax = plt.subplots(figsize=(10, 6))
-        top10 = top_imp.sort_values('Importance')
-        colors = plt.cm.plasma(np.linspace(0, 1, len(top10)))
-        bars = ax.barh(range(len(top10)), top10['Importance'], color=colors, alpha=0.8)
-        ax.set_yticks(range(len(top10)))
-        ax.set_yticklabels([str(f)[:25] + '...' if len(str(f)) > 25 else str(f) 
-                            for f in top10['Fitur']], fontsize=10)
-        ax.set_xlabel('Importance Score', fontweight='bold')
-        ax.set_title('Feature Importance Ranking (Random Forest)', 
-                    fontsize=16, fontweight='bold', pad=20)
-        ax.grid(axis='x', alpha=0.3)
-        
-        # Value labels
-        for i, bar in enumerate(bars):
-            width = bar.get_width()
-            ax.text(width + 0.0005, i, f'{width:.4f}', 
-                    va='center', fontweight='bold', fontsize=10)
-        plt.tight_layout()
-        st.pyplot(fig)
 
 st.markdown("---")
-st.markdown("""
-<div style='text-align:center; color:#888; padding:2rem;'>
-    <h3>🎓 Dibuat untuk Analisis Data Roblox</h3>
-    <p>Model Random Forest | F1-Score {:.3f} | Powered by Streamlit</p>
-</div>
-""".format(metrics['f1_score']), unsafe_allow_html=True)
