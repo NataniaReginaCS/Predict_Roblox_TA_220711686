@@ -132,40 +132,44 @@ def load_model_and_artifacts():
         st.error(f"🚨 **Model loading failed:** {str(e)}")
         st.stop()
 
-final_model, df, X_test, y_test, y_pred, y_prob, metrics, roc_data, df_imp = load_model_and_artifacts()
-baseline_prob = float(np.mean(y_test))
-
-def explain_prediction(model_pipeline, original_input_df, feature_cols):
-    try:
-        preprocessor = model_pipeline.named_steps['preprocessor']
-        feature_selection = model_pipeline.named_steps['feature_selection']
+def explain_prediction(model_pipeline, original_input_df, feature_cols, predicted_prob): 
+    try: 
+        preprocessor = model_pipeline.named_steps['preprocessor'] 
+        feature_selection = model_pipeline.named_steps['feature_selection'] 
         rf_model = model_pipeline.named_steps['model']
 
         transformed_input = preprocessor.transform(original_input_df)
-        
         preprocessed_feature_names = preprocessor.get_feature_names_out()
 
         selected_feature_mask = feature_selection.get_support()
         final_selected_feature_names = preprocessed_feature_names[selected_feature_mask]
-        
+    
         importances = rf_model.feature_importances_
+        transformed_input_df = pd.DataFrame(transformed_input[:, selected_feature_mask],
+                                        columns=final_selected_feature_names,
+                                        index=original_input_df.index)
+
+        raw_contributions = {}
+        for col_name, score in zip(final_selected_feature_names, importances):
+            if col_name in transformed_input_df.columns:
+                raw_contributions[col_name] = transformed_input_df[col_name].iloc[0] * score
+            else:
+                raw_contributions[col_name] = 0 
         
-        feature_importance_map = dict(zip(final_selected_feature_names, importances))
+        raw_contrib_series = pd.Series(raw_contributions)
 
-        contributions = []
-        transformed_input_df = pd.DataFrame(transformed_input[:, selected_feature_mask], columns=final_selected_feature_names)
+        sum_abs_raw_contribs = raw_contrib_series.abs().sum()
+        
+        normalized_contributions = []
+        if sum_abs_raw_contribs > 0:
+            for feature, raw_contrib in raw_contrib_series.items():
+                normalized_contrib = (raw_contrib / sum_abs_raw_contribs) * predicted_prob
+                normalized_contributions.append({"feature": feature, "contribution": normalized_contrib})
+        else:
+            for feature in raw_contrib_series.index:
+                normalized_contributions.append({"feature": feature, "contribution": 0.0})
 
-        for col_name in final_selected_feature_names:
-            value = transformed_input_df[col_name].iloc[0]
-            importance_score = feature_importance_map.get(col_name, 0)
-            contrib = value * importance_score
-
-            contributions.append({
-                "feature": col_name,
-                "contribution": contrib
-            })
-
-        exp_df = pd.DataFrame(contributions)
+        exp_df = pd.DataFrame(normalized_contributions)
         exp_df["abs_contribution"] = exp_df["contribution"].abs()
         exp_df = exp_df.sort_values("abs_contribution", ascending=False)
         exp_df = exp_df.drop(columns="abs_contribution")
@@ -174,7 +178,10 @@ def explain_prediction(model_pipeline, original_input_df, feature_cols):
     except Exception as e:
         st.error(f"Error generating explanation: {e}")
         return None
-    
+
+final_model, df, X_test, y_test, y_pred, y_prob, metrics, roc_data, df_imp = load_model_and_artifacts()
+baseline_prob = float(np.mean(y_test))
+
 # Data prep
 unique_genres = sorted(df.get("Genre", pd.Series()).dropna().unique().tolist())
 unique_ages = sorted(df.get("AgeRecommendation", pd.Series()).dropna().unique().tolist())
@@ -266,7 +273,7 @@ with tab1:
         
         col3, col4 = st.columns([1,1])
         with col3:
-            visits = st.number_input("👥 **Total Visits**", min_value=0.0, value=50000.0)
+            visits = st.number_input("👥 **Total Visits**", min_value=0, value=50000)
             favorites = st.number_input("❤️ **Favorites**", min_value=0, value=2500)
         with col4:
             likes = st.number_input("👍 **Likes**", min_value=0, value=5000)
@@ -311,7 +318,8 @@ with tab1:
             explanation_df = explain_prediction(
                 final_model,
                 input_df[feature_cols],
-                feature_cols
+                feature_cols,
+                prob 
             )
 
         # Display result
@@ -336,49 +344,54 @@ with tab1:
             </div>""", unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
-        st.markdown("### 🧠 Model Reasoning")
 
-        colA, colB = st.columns(2)
+        st.markdown("### 💡 **Rekomendasi Peningkatan**")
+        st.markdown("Berikut adalah fitur-fitur yang bisa difokuskan untuk meningkatkan peluang sukses game:")
+        preprocessor_step = final_model.named_steps['preprocessor']
+        feature_selection_step = final_model.named_steps['feature_selection']
+        all_processed_features_names = preprocessor_step.get_feature_names_out()
+        selected_features_mask = feature_selection_step.get_support()
+        final_feature_names = all_processed_features_names[selected_features_mask]
 
-        with colA:
-            st.metric(
-                "Baseline Success Rate",
-                f"{baseline_prob*100:.1f}%"
-            )
+        actionable_features = {
+            "num__update_gap_days": "Kurangi gap antar update game secara berkala untuk menjaga relevansi.",
+            "num__visit_velocity": "Tingkatkan daya tarik dan visibilitas game untuk menarik lebih banyak kunjungan dalam waktu singkat.",
+            "num__favorite_rate": "Buat game lebih menarik dan berkesan agar pemain memberikan 'favorite' lebih banyak.",
+            "num__engagement_rate": "Tingkatkan interaksi pemain (likes/dislikes) dan bangun komunitas agar game lebih hidup.",
+            "num__like_ratio": "Fokus pada kualitas game dan pengalaman positif untuk mendapatkan lebih banyak 'Likes' dibandingkan 'Dislikes'.",
+            "num__game_age": "Game yang terlalu lama mungkin butuh pembaruan besar, event baru, atau perombakan untuk tetap relevan dan menarik.",
+            "cat__Genre_Action": "Jika game bergenre Action, optimalkan gameplay yang cepat dan menantang.",
+            "cat__Genre_Adventure": "Fokus pada eksplorasi dan narasi yang menarik untuk game petualangan.",
+            "cat__Genre_Education": "Perkaya konten edukasi dan jadikan pembelajaran lebih interaktif.",
+            "cat__Genre_Entertainment": "Tingkatkan elemen hiburan dan daya tarik visual.",
+            "cat__Genre_Obby & Platformer": "Rancang level yang kreatif dan mekanisme lompatan yang menyenangkan.",
+            "cat__Genre_Party & Casual": "Buat game mudah diakses, sosial, dan cocok untuk dimainkan bersama.",
+            "cat__Genre_Puzzle": "Kembangkan teka-teki yang menantang namun memuaskan untuk dipecahkan.",
+            "cat__Genre_RPG": "Perkaya elemen role-playing, cerita, dan kustomisasi karakter.",
+            "cat__Genre_Roleplay & Avatar Sim": "Fokus pada interaksi sosial, kustomisasi avatar, dan simulasi kehidupan.",
+            "cat__Genre_Shooter": "Optimalkan kontrol, keseimbangan senjata, dan mode permainan yang kompetitif.",
+            "cat__Genre_Simulation": "Tingkatkan realisme, manajemen sumber daya, dan kemungkinan kustomisasi dalam simulasi.",
+            "cat__Genre_Shopping": "Sediakan berbagai item unik dan pengalaman belanja yang menarik.",
+            "cat__AgeRecommendation_All Ages": "Sesuaikan konten dan gameplay agar cocok untuk semua usia.",
+            "cat__AgeRecommendation_Ages 9+": "Sesuaikan konten dan gameplay untuk target audiens usia 9 tahun ke atas.",
+            "cat__AgeRecommendation_Ages 13+": "Sesuaikan konten dan gameplay untuk target audiens usia 13 tahun ke atas."
+        }
 
-        with colB:
-            st.metric(
-                "Predicted Success Rate",
-                f"{prob*100:.1f}%",
-                delta=f"{(prob-baseline_prob)*100:.1f}%"
-            )
+        for feature_name in final_feature_names:
+            if feature_name not in actionable_features:
+                feature_display_name = feature_name.replace('num__', '').replace('cat__', '').replace('_', ' ').title()
+                actionable_features[feature_name] = f"Pertimbangkan untuk mengoptimalkan aspek '{feature_display_name}' untuk meningkatkan peluang sukses."
 
-        st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
-        st.markdown(
-        """
-        Baseline adalah peluang sukses rata-rata game dalam dataset sebelum model melihat fitur game tertentu.
-        """
-        )
+        features_to_improve = explanation_df[explanation_df['contribution'] < 0.001]
 
-        # =====================================================
-        # EXPLANATION
-        # =====================================================
+        if not features_to_improve.empty:
+            for _, row in features_to_improve.iterrows():
+                feature_name_original = row['feature'] 
+                recommendation = actionable_features.get(feature_name_original, f"Perbaiki aspek '{feature_name_original.replace('num__', '').replace('cat__', '').replace('_', ' ').title()}' untuk meningkatkan kontribusi positif.")
+                st.markdown(f"- **{feature_name_original.replace('num__', '').replace('cat__', '').replace('_', ' ').title()}**: {recommendation} (Kontribusi: `{row['contribution']:.3f}`)")
+        else:
+            st.markdown("Semua fitur utama sudah berkontribusi positif. Fokus pada pengoptimalan lebih lanjut!")
 
-        if explanation_df is not None:
-            st.markdown("### 🔎 AI Explanation")
-            st.markdown(
-            """
-            Model menjelaskan fitur mana yang paling mempengaruhi prediksi.
-            (+): meningkatkan peluang sukses  
-            (-): menurunkan peluang sukses
-            """
-            )
-
-            for _, row in explanation_df.iterrows():
-                sign = "+" if row["contribution"] >= 0 else "-"
-                st.markdown(
-                    f"**{row['feature']}** → `{sign}{abs(row['contribution']):.3f}`"
-                )
 
 # =====================================================
 # TAB 2: ANALYTICS 
@@ -488,9 +501,8 @@ with tab3:
     st.subheader("🎨 **Top 10 Genres**")
     st.markdown("""
     <div style='font-size:1.1rem;'>
-    <b>Feature Importance</b> menunjukkan fitur mana yang paling berpengaruh terhadap prediksi kesuksesan game Roblox.<br>
-    Fitur dengan skor tertinggi memiliki kontribusi terbesar dalam model Random Forest.<br>
-    Gunakan insight ini untuk mengoptimalkan aspek-aspek game yang penting!
+    <b>Top Genre</b> menunjukkan genre game Roblox yang paling sering muncul dalam dataset.<br>
+    Dengan melihat genre teratas, Anda dapat memahami tren kategori game yang paling diminati dan merencanakan pengembangan konten yang sesuai.
     </div>
     """, unsafe_allow_html=True) 
     genre_df = (df["Genre"].value_counts()
@@ -504,11 +516,11 @@ with tab3:
     st.subheader("📈 **Dataset Statistics**")
     st.markdown("""
     <div style='font-size:1.1rem;'>
-    <b>Feature Importance</b> menunjukkan fitur mana yang paling berpengaruh terhadap prediksi kesuksesan game Roblox.<br>
-    Fitur dengan skor tertinggi memiliki kontribusi terbesar dalam model Random Forest.<br>
-    Gunakan insight ini untuk mengoptimalkan aspek-aspek game yang penting!
+    <b>Dataset Statistics</b> memberikan ringkasan statistik dari seluruh fitur dalam dataset.<br>
+    Anda dapat melihat nilai rata-rata, standar deviasi, minimum, maksimum, dan jumlah unik untuk setiap fitur.<br>
+    Informasi ini membantu memahami karakteristik data sebelum melakukan analisis lebih lanjut.
     </div>
-    """, unsafe_allow_html=True) 
+    """, unsafe_allow_html=True)
     
     try:
         desc = df.describe(include='all').T.round(2)
