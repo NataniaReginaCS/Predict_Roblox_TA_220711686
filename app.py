@@ -388,7 +388,8 @@ with tab1:
             for _, row in features_to_improve.iterrows():
                 feature_name_original = row['feature'] 
                 recommendation = actionable_features.get(feature_name_original, f"Perbaiki aspek '{feature_name_original.replace('num__', '').replace('cat__', '').replace('_', ' ').title()}' untuk meningkatkan kontribusi positif.")
-                st.markdown(f"- **{feature_name_original.replace('num__', '').replace('cat__', '').replace('_', ' ').title()}**: {recommendation} (Kontribusi: `{row['contribution']:.3f}`)")
+                display_contribution = abs(row['contribution'])
+                st.markdown(f"- **{feature_name_original.replace('num__', '').replace('cat__', '').replace('_', ' ').title()}**: {recommendation} (Mengurangi peluang sukses sebesar `{display_contribution:.3f}`)")
         else:
             st.markdown("Semua fitur utama sudah berkontribusi positif. Fokus pada pengoptimalan lebih lanjut!")
 
