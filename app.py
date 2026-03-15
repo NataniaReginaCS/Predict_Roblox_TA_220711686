@@ -33,6 +33,7 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
     text-align: center;
     margin: 1rem 0 2rem 0 !important;
+    color: black !important;
 }
 
 /* Metric Cards */
@@ -220,6 +221,7 @@ with tab1:
 
             pred = final_model.predict(input_df)[0]
             prob = final_model.predict_proba(input_df)[:, 1][0]
+
         
         # Display result
         if pred == 1:
@@ -227,7 +229,7 @@ with tab1:
             <div class="success-box">
                 <h2>🎉 HIGH SUCCESS POTENTIAL!</h2>
                 <h3 style='color:#2d5a2a; font-size:2rem;'>
-                    <span class="stats-metric">{prob:.1%}</span>
+                    <span class="stats-metric">Probability of success: {prob*100:.1f}%</span>
                 </h3>
                 <p>🚀 This game has viral potential on Roblox!</p>
             </div>""", unsafe_allow_html=True)
@@ -236,7 +238,7 @@ with tab1:
             <div class="error-box">
                 <h2>⚠️ Needs Optimization </h2>
                 <h3 style='color:#8b1a1a; font-size:2rem;'>
-                    <span class="stats-metric">{prob:.1%}</span>
+                    <span class="stats-metric">Probability of success: {prob*100:.1f}%</span>
                 </h3>
                 <p>💡 Improve marketing & engagement strategies</p>
             </div>""", unsafe_allow_html=True)
